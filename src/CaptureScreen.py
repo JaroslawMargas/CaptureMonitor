@@ -6,6 +6,7 @@ import win32api
 import datetime
 import re
 from PIL import Image, ImageDraw
+import ImageEffects
 
 module_logger = logging.getLogger('application.CaptureScreen')
 
@@ -37,7 +38,6 @@ class CaptureScreen(object):
         self.screen = None
         self.rgba_image = None
         self.image = None
-        self.ellipse_image = None
         self.out = None
         # radius of the circle for the mouse position
         self.radius = 10
@@ -104,7 +104,7 @@ class CaptureScreen(object):
         # self.screen.CreateCompatibleBitmap(self.img_dc, 640,480)
         self.mem_dc.SelectObject(self.screen)
 
-    def copy_screen_to_memory(self, ):
+    def copy_screen_to_memory(self):
         self.mem_dc.BitBlt(
             (0, 0),
             (self.width, self.height),
@@ -126,21 +126,8 @@ class CaptureScreen(object):
         # convert BGRX to RGBA
         self.rgba_image = self.image.convert('RGBA')
 
-        # create new Image  RGBA
-        self.ellipse_image = Image.new('RGBA', self.image.size, (255, 255, 255, 0))
-
-        # draw ellipse there
-        d = ImageDraw.Draw(self.ellipse_image)
-        d.ellipse((self.x_draw - self.radius,
-                   self.y_draw - self.radius,
-                   self.x_draw + self.radius,
-                   self.y_draw + self.radius),
-                  fill=(255, 0, 0, 128))
-
-        # blend alpha screen shot with cursor point
-        self.out = Image.alpha_composite(self.rgba_image, self.ellipse_image)
-
-        return True
+        image = ImageEffects.ImageEffects()
+        self.out = image.add_circle_to_image(self.rgba_image, self.x_draw, self.y_draw, self.radius, (255, 0, 0, 128))
 
     def save_bitmap_to_file(self, ):
         # self.path = os.getcwd()
@@ -152,4 +139,3 @@ class CaptureScreen(object):
         win32gui.DeleteObject(self.screen.GetHandle())
         self.image.close()
         self.rgba_image.close()
-        self.ellipse_image.close()
