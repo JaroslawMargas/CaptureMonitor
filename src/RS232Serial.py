@@ -42,8 +42,9 @@ def scan_ports() :
             s = serial.Serial('COM' + str(i))
             available.append(s.portstr)
             s.close()  # explicit close 'cause of delayed GC in java
-        except serial.SerialException :
-            pass
+        except Exception as err :
+            self.logger.debug("serial issue: " + str(err))
+    return available
 
 
 def hex_string_to_dec(hex_input) :
