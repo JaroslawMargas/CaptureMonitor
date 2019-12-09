@@ -14,6 +14,7 @@ import XmlCreator
 import pickle
 import Queue
 import os
+import RS232Serial
 
 module_logger = logging.getLogger('application.HookEvent')
 
@@ -64,6 +65,8 @@ class HookEvent(object):
         self.is_connected = False
         self.start_time = time.time()
 
+        self.send_rs = True
+
         self.width = 0
         self.height = 0
         self.width_offset = 0
@@ -73,17 +76,27 @@ class HookEvent(object):
         self.logger.debug('Number of display devices: %s ', str(self.enum.enum_display_devices()))
         self.logger.debug('Number of physical monitors: %s ', str(self.enum.get_visible_monitors()))
 
-        self.event_thread = threading.Event()
+        self.event_tcp_thread = threading.Event()
+        self.event_rs232_thread = threading.Event()
         time_out_event = 2
-        self.queue = Queue.Queue()
+        self.tcp_queue = Queue.Queue()
         time_out_empty = 0.25
         tcp_thread = threading.Thread(name='blocking',
                                       target=self.send_tcp_command,
-                                      args=(self.event_thread, time_out_event, self.queue, time_out_empty))
+                                      args=(self.event_tcp_thread, time_out_event, self.tcp_queue, time_out_empty))
         tcp_thread.start()
         self.server = None
 
+        self.rs232_queue = Queue.Queue()
+        rs232_thread = threading.Thread(name='blocking',
+                                        target=self.send_rs232_command,
+                                        args=(
+                                            self.event_rs232_thread, time_out_event, self.rs232_queue, time_out_empty))
+        rs232_thread.start()
+
         self.xml_data = XmlCreator
+
+        self.rsCommand = RS232Serial.RS232Serial()
 
     def identify_monitor_params(self):
         monitor_info = win32api.GetMonitorInfo(win32api.MonitorFromPoint(win32api.GetCursorPos()))
@@ -127,7 +140,7 @@ class HookEvent(object):
 
             event_thread.wait(time_out_event)
             if event_thread.is_set():
-                self.logger.debug('New data on the list - ready to be sent: %s', event_thread.is_set())
+                self.logger.debug('New data on the list - ready to be sent by tcp: %s', event_thread.is_set())
 
                 while True:
                     try:
@@ -151,6 +164,35 @@ class HookEvent(object):
                                 self.logger.error('Timeout ACK')
                             if is_ack:
                                 self.logger.debug('Next data')
+                        else:
+                            break
+            else:
+                self.logger.debug('Waiting for event to send %s:', event_thread.is_set())
+
+    def send_rs232_command(self, event_thread, time_out_event, queue, time_out_empty):
+
+        while True:
+            event_thread.wait(time_out_event)
+            if event_thread.is_set():
+                self.logger.debug('New data on the list - ready to be sent by rs232: %s', event_thread.is_set())
+
+                while True:
+                    try:
+                        value = queue.get(timeout=time_out_empty)
+                        # If timeout, it blocks at most timeout seconds and raises the Empty exception
+                        # if no item was available within that time.
+                    except Queue.Empty:
+                        event_thread.clear()
+                        queue.task_done()
+                        break
+                    else:
+                        if self.send_rs:
+                            self.rsCommand.set_command(value, True)
+                            self.rsCommand.send_command()
+                            # time.sleep(0.001)
+                            self.rsCommand.set_command(value, False)
+                            self.rsCommand.send_command()
+
                         else:
                             break
             else:
@@ -338,16 +380,16 @@ class HookEvent(object):
         return True
 
     def hook_mouse_and_key(self):
-        self.hm.SubscribeMouseMove(self.move)
-        self.hm.SubscribeMouseLeftDown(self.left_down)
-        self.hm.SubscribeMouseRightDown(self.right_down)
-        self.hm.SubscribeMouseMiddleDown(self.middle_down)
-        self.hm.SubscribeMouseLeftUp(self.left_down)
-        self.hm.SubscribeMouseRightUp(self.right_down)
-        self.hm.SubscribeMouseMiddleUp(self.middle_down)
-        self.hm.SubscribeMouseWheel(self.wheel)
-        #         self.hm.MouseAll = self.on_mouse_event
-        self.hm.HookMouse()
+        # self.hm.SubscribeMouseMove(self.move)
+        # self.hm.SubscribeMouseLeftDown(self.left_down)
+        # self.hm.SubscribeMouseRightDown(self.right_down)
+        # self.hm.SubscribeMouseMiddleDown(self.middle_down)
+        # self.hm.SubscribeMouseLeftUp(self.left_down)
+        # self.hm.SubscribeMouseRightUp(self.right_down)
+        # self.hm.SubscribeMouseMiddleUp(self.middle_down)
+        # self.hm.SubscribeMouseWheel(self.wheel)
+        # #         self.hm.MouseAll = self.on_mouse_event
+        # self.hm.HookMouse()
 
         # hook keyboard
         self.hm.KeyDown = self.on_keyboard_event  # watch for all keyboard events
@@ -369,9 +411,15 @@ class HookEvent(object):
                 time.sleep(value[5])  # first wait elapsed time then press
 
                 if self.is_connected:
-                    self.queue.put(value)
-                    self.event_thread.set()
-                    self.logger.debug('Set event to send: %s', self.event_thread.is_set())
+                    self.tcp_queue.put(value)
+                    self.event_tcp_thread.set()
+                    self.logger.debug('Set event to send tcp: %s', self.event_tcp_thread.is_set())
+
+                if self.send_rs:
+                    # add KEY value to queue
+                    self.rs232_queue.put(hex(value[4]))
+                    self.event_rs232_thread.set()
+                    self.logger.debug('Set event to send rs232: %s', self.event_rs232_thread.is_set())
 
                 if value[2] == Event_type['mouse move']:
                     # Pass the coordinates (x,y) as a tuple:
