@@ -30,8 +30,10 @@ def get_check_sum(data):
     i_check = 0x00
     for i in range(data[1] - 1):
         i_check += (data[2 + i])
-    check_sum = hex(i_check & 0xFF)
-    module_logger.debug("checksum: " + str(check_sum))
+    tmp = i_check & 0xFF
+    # remove 0x from hex
+    check_sum = str('%x' % tmp)
+    # return string
     return check_sum
 
 
@@ -68,39 +70,23 @@ class RS232Serial(object):
     def set_command(self, key, key_pressed):
 
         try:
-            hex_buffer = bytearray()
             if key_pressed:
-                # command = button_pressed[key]
-
-                # command string convert to list each 4 value ex. 0x40
                 command_string = self.config.get('key_pressed', key)
-                self.logger.debug("Get pressed command: " + str(command_string))
-                n = 4
-                command = [int(command_string[i:i + n], 16) for i in range(0, len(command_string), n)]
-                self.logger.debug("command RS232: " + str(command))
-
-                check_sum = get_check_sum(command)
-            # else released
             else:
-                # command = button_released[key]
-
-                # command string convert to list each 4 value ex. 0x40
                 command_string = self.config.get('key_released', key)
-                self.logger.debug("Get released command: " + str(command_string))
-                n = 4
-                command = [int(command_string[i:i + n], 16) for i in range(0, len(command_string), n)]
-                self.logger.debug("command RS232: " + str(command))
 
-                check_sum = get_check_sum(command)
+            self.logger.debug("Get command: " + str(command_string))
+            n = 2
+            command = [int(command_string[i:i + n], 16) for i in range(0, len(command_string), n)]
 
-            for x in command:
-                hex_buffer.append(x)
-                hex_buffer.append(int(check_sum, 16))
-                self.buffer = hex_buffer
-            return True
+            check_sum = get_check_sum(command)
+            command_checksum = command_string + check_sum
+            self.logger.debug("Set command with checksum: " + str(command_checksum))
+
+            self.buffer.fromhex(command_checksum)
+
         except Exception as err:
             self.logger.debug("No possible set command: " + str(err))
-            return False
 
     def send_command(self):
         out = ''
@@ -113,6 +99,8 @@ class RS232Serial(object):
                 self.ser.write(version)
                 # time.sleep(0.001)
                 self.ser.write(self.buffer)
+                for x in self.buffer:
+                    self.logger.debug(hex(x))
         except Exception as err:
             self.logger.debug(err)
         return True
