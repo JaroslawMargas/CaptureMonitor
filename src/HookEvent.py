@@ -192,6 +192,7 @@ class HookEvent(object):
                             # time.sleep(0.001)
                             self.rsCommand.set_command(value, False)
                             self.rsCommand.send_command()
+                            self.rsCommand.read_command()
 
                         else:
                             break

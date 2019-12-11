@@ -1,17 +1,9 @@
 import logging
 import serial
 import ConfigParser
+import time
 
 module_logger = logging.getLogger('application.RS232Serial')
-
-version = bytearray()
-version.append(0x40)
-version.append(0x05)
-version.append(0xD7)
-version.append(0x01)
-version.append(0x01)
-version.append(0x09)
-version.append(0xE2)
 
 
 def scan_ports():
@@ -44,10 +36,13 @@ class RS232Serial(object):
         self.config = ConfigParser.RawConfigParser()
         self.config.read("rscommand.ini")
         self.buffer = bytearray()
+        self.version = bytearray()
 
         self.ser = serial.Serial()
         self.ser.port = self.config.get('settings', "port")
         self.ser.baudrate = self.config.get('settings', "baudrate")
+        # self.ser.port = "COM1"
+        # self.ser.baudrate = 9600
         self.ser.bytesize = serial.EIGHTBITS  # number of bits per bytes
         self.ser.parity = serial.PARITY_ODD  # set parity check: no parity
         self.ser.stopbits = serial.STOPBITS_ONE  # number of stop bits
@@ -56,7 +51,10 @@ class RS232Serial(object):
         #         self.ser.dsrdtr = False       #disable hardware (DSR/DTR) flow control
 
         #         ser.timeout = None          #block read
-        #         ser.timeout = 1            #non-block read
+        self.ser.timeout = int(self.config.get('settings', "timeout"))
+        # read() - set timeout to x seconds (float allowed) returns immediately when the
+        # requested number of bytes are available, otherwise wait until the timeout expires and return all bytes that
+        # were received until then.
         #         ser.xonxoff = False     #disable software flow control
         #         ser.rtscts = False     #disable hardware (RTS/CTS) flow control
         #         ser.dsrdtr = False       #disable hardware (DSR/DTR) flow control
@@ -64,12 +62,15 @@ class RS232Serial(object):
 
         try:
             self.ser.open()
+            self.logger.debug("Serial port opened: " + self.ser.port)
         except Exception as err:
             self.logger.debug(err)
 
     def set_command(self, key, key_pressed):
 
         try:
+            command_version = self.config.get('version', 'key_version')
+
             if key_pressed:
                 command_string = self.config.get('key_pressed', key)
             else:
@@ -84,23 +85,30 @@ class RS232Serial(object):
             self.logger.debug("Set command with checksum: " + str(command_checksum))
 
             self.buffer.fromhex(command_checksum)
-
+            self.version.fromhex(command_version)
+            return True
         except Exception as err:
-            self.logger.debug("No possible set command: " + str(err))
+            self.logger.debug("No possible set command: " + str(err.message))
 
     def send_command(self):
-        out = ''
         try:
-            # while self.ser.inWaiting() > 0:
-            out += self.ser.read()
-            if out != '':
-                # print hex(int(out.encode('hex'), 16))
-                # if(hex(int(out.encode('hex'), 16)) == '0x4002d6d6'):
-                self.ser.write(version)
-                # time.sleep(0.001)
-                self.ser.write(self.buffer)
-                for x in self.buffer:
-                    self.logger.debug(hex(x))
+            self.ser.write(self.version)
+            time.sleep(0.001)
+            self.ser.write(self.buffer)
+            return True
         except Exception as err:
-            self.logger.debug(err)
+            self.logger.debug("No possible send command: " + str(err.message))
         return True
+
+    def read_command(self):
+        try:
+            received_string = ''
+            while True:
+                c = self.ser.read(1)
+                if c:
+                    received_string += str(hex(int(c.encode('hex'), 16)))
+                else:
+                    break
+            return received_string
+        except Exception as err:
+            self.logger.debug("No possible read command: " + str(err.message))
