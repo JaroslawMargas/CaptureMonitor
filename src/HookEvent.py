@@ -384,16 +384,16 @@ class HookEvent(object):
         return True
 
     def hook_mouse_and_key(self):
-        # self.hm.SubscribeMouseMove(self.move)
-        # self.hm.SubscribeMouseLeftDown(self.left_down)
-        # self.hm.SubscribeMouseRightDown(self.right_down)
-        # self.hm.SubscribeMouseMiddleDown(self.middle_down)
-        # self.hm.SubscribeMouseLeftUp(self.left_down)
-        # self.hm.SubscribeMouseRightUp(self.right_down)
-        # self.hm.SubscribeMouseMiddleUp(self.middle_down)
-        # self.hm.SubscribeMouseWheel(self.wheel)
-        # #         self.hm.MouseAll = self.on_mouse_event
-        # self.hm.HookMouse()
+        self.hm.SubscribeMouseMove(self.move)
+        self.hm.SubscribeMouseLeftDown(self.left_down)
+        self.hm.SubscribeMouseRightDown(self.right_down)
+        self.hm.SubscribeMouseMiddleDown(self.middle_down)
+        self.hm.SubscribeMouseLeftUp(self.left_down)
+        self.hm.SubscribeMouseRightUp(self.right_down)
+        self.hm.SubscribeMouseMiddleUp(self.middle_down)
+        self.hm.SubscribeMouseWheel(self.wheel)
+        #         self.hm.MouseAll = self.on_mouse_event
+        self.hm.HookMouse()
 
         # hook keyboard
         self.hm.KeyDown = self.on_keyboard_event  # watch for all keyboard events
