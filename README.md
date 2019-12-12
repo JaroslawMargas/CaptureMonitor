@@ -14,6 +14,7 @@ TCP_IP = localhost for the server
 
 rscommand.ini
 version - send comand with version to device before command key
+
 key pressed/key relassed -  map :  keyboard key = command hex
 
 HookEvent.py
