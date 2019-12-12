@@ -22,10 +22,9 @@ def get_check_sum(data):
     i_check = 0x00
     for i in range(data[1] - 1):
         i_check += (data[2 + i])
-    tmp = i_check & 0xFF
+    check_sum = hex(i_check & 0xFF)
     # remove 0x from hex
-    check_sum = str('%x' % tmp)
-    # return string
+    # check_sum = str('%x' % tmp)
     return check_sum
 
 
@@ -66,8 +65,17 @@ class RS232Serial(object):
         except Exception as err:
             self.logger.debug(err)
 
-    def set_command(self, key, key_pressed):
+    def fill_buffer(self, hex_str_command):
+        hex_buffer = bytearray()
+        n = 4
+        command = [int(hex_str_command[i:i + n], 16) for i in range(0, len(hex_str_command), n)]
+        for x in command:
+            hex_buffer.append(x)
+        check_sum = get_check_sum(command)
+        hex_buffer.append(int(check_sum, 16))
+        return hex_buffer
 
+    def set_command(self, key, key_pressed):
         try:
             command_version = self.config.get('version', 'key_version')
 
@@ -76,21 +84,17 @@ class RS232Serial(object):
             else:
                 command_string = self.config.get('key_released', key)
 
-            self.logger.debug("Get command: " + str(command_string))
-            n = 2
-            command = [int(command_string[i:i + n], 16) for i in range(0, len(command_string), n)]
-
-            check_sum = get_check_sum(command)
-            command_checksum = command_string + check_sum
-            self.logger.debug("Set command with checksum: " + str(command_checksum))
-
-            self.buffer.fromhex(command_checksum)
-            self.version.fromhex(command_version)
+            self.logger.debug("Get command and fill buffer: " + str(command_string))
+            self.buffer = self.fill_buffer(command_string)
+            self.logger.debug("Get command version and fill buffer: " + str(command_version))
+            self.version = self.fill_buffer(command_version)
             return True
+
         except Exception as err:
             self.logger.debug("No possible set command: " + str(err.message))
 
     def send_command(self):
+        self.logger.debug("Send command: ")
         try:
             self.ser.write(self.version)
             time.sleep(0.001)
@@ -109,6 +113,15 @@ class RS232Serial(object):
                     received_string += str(hex(int(c.encode('hex'), 16)))
                 else:
                     break
+            print(received_string)
             return received_string
         except Exception as err:
             self.logger.debug("No possible read command: " + str(err.message))
+
+
+if __name__ == "__main__":
+    rs = RS232Serial()
+    rs.set_command("0x31", True)
+    rs.send_command()
+    time.sleep(0.001)
+    rs.read_command()

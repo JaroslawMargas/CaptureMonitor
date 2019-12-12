@@ -181,19 +181,22 @@ class HookEvent(object):
                         value = queue.get(timeout=time_out_empty)
                         # If timeout, it blocks at most timeout seconds and raises the Empty exception
                         # if no item was available within that time.
+
                     except Queue.Empty:
                         event_thread.clear()
                         queue.task_done()
                         break
                     else:
                         if self.send_rs:
-                            self.rsCommand.set_command(value, True)
-                            self.rsCommand.send_command()
+                            if value[1] == 2:
+                                self.rsCommand.set_command(value[0], True)
+                                self.rsCommand.send_command()
                             # time.sleep(0.001)
-                            self.rsCommand.set_command(value, False)
-                            self.rsCommand.send_command()
-                            self.rsCommand.read_command()
-
+                            if value[1] == 3:
+                                self.rsCommand.set_command(value[0], False)
+                                self.rsCommand.send_command()
+                            received = self.rsCommand.read_command()
+                            self.logger.debug('Received command %s:', received)
                         else:
                             break
             else:
@@ -417,8 +420,8 @@ class HookEvent(object):
                     self.logger.debug('Set event to send tcp: %s', self.event_tcp_thread.is_set())
 
                 if self.send_rs:
-                    # add KEY value to queue
-                    self.rs232_queue.put(hex(value[4]))
+                    # add KEY value to queue [key, status]
+                    self.rs232_queue.put((hex(value[4]), value[2]))
                     self.event_rs232_thread.set()
                     self.logger.debug('Set event to send rs232: %s', self.event_rs232_thread.is_set())
 
