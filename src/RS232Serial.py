@@ -36,6 +36,7 @@ class RS232Serial(object):
         self.config.read("rscommand.ini")
         self.buffer = bytearray()
         self.version = bytearray()
+        self.hex_buffer = bytearray()
 
         self.ser = serial.Serial()
         self.ser.port = self.config.get('settings', "port")
@@ -66,14 +67,13 @@ class RS232Serial(object):
             self.logger.debug(err)
 
     def fill_buffer(self, hex_str_command):
-        hex_buffer = bytearray()
         n = 4
         command = [int(hex_str_command[i:i + n], 16) for i in range(0, len(hex_str_command), n)]
         for x in command:
-            hex_buffer.append(x)
+            self.hex_buffer.append(x)
         check_sum = get_check_sum(command)
-        hex_buffer.append(int(check_sum, 16))
-        return hex_buffer
+        self.hex_buffer.append(int(check_sum, 16))
+        return self.hex_buffer
 
     def set_command(self, key, key_pressed):
         try:
@@ -113,7 +113,7 @@ class RS232Serial(object):
                     received_string += str(hex(int(c.encode('hex'), 16)))
                 else:
                     break
-            print(received_string)
+            # print(received_string)
             return received_string
         except Exception as err:
             self.logger.debug("No possible read command: " + str(err.message))

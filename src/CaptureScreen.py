@@ -5,8 +5,9 @@ import win32con
 import win32api
 import datetime
 import re
-from PIL import Image, ImageDraw
+from PIL import Image
 import ImageEffects
+import MonitorParams
 
 module_logger = logging.getLogger('application.CaptureScreen')
 
@@ -42,13 +43,15 @@ class CaptureScreen(object):
         # radius of the circle for the mouse position
         self.radius = 10
 
-    def set_capture_params(self, width, height, width_offset, height_offset):
+    def set_capture_params(self):
+        monitor_params = MonitorParams.MonitorParams()
+        params = monitor_params.get_monitor_params()
 
         self.file_name = get_current_time_date_to_string() + ".png"
-        self.width = width
-        self.height = height
-        self.width_offset = width_offset
-        self.height_offset = height_offset
+        self.width = params[0]
+        self.height = params[1]
+        self.width_offset = params[2]
+        self.height_offset = params[3]
         self.logger.debug('Setting Capture Params %s %s and offset %s %s ',
                           self.width,
                           self.height,
@@ -67,7 +70,7 @@ class CaptureScreen(object):
         try:
             i = win32api.GetSystemMetrics(win32con.SM_CMONITORS)
         except Exception as ex:
-            self.logger.DEBUG('eception: %s', ex.message)
+            self.logger.debug('eception: %s', ex.message)
         return i
 
     # this function gets displayDeviceName   
@@ -76,7 +79,7 @@ class CaptureScreen(object):
         while True:
             try:
                 device = win32api.EnumDisplayDevices(None, i)
-                self.logger.DEBUG('Count [%d] Device: %s DeviceName(%s) ', i, device.DeviceString, device.DeviceName)
+                self.logger.debug('Count [%d] Device: %s DeviceName(%s) ', i, device.DeviceString, device.DeviceName)
                 i += 1
             except Exception as ex:
                 self.logger.info('exception: %s', ex.message)
