@@ -44,11 +44,10 @@ class TCPServer(object):
     def send_data(self, data):
         try:
             self.connection.sendall(data)
-            return True
         except socket.error as err:
             if err.errno:
                 self.logger.error('Error send_data(): %s', err)
-                return False
+
 
     def set_timeout(self, ):
         #         self.timeout_event = timeout_event

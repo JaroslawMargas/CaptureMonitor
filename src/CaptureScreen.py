@@ -2,7 +2,6 @@ import logging
 import win32gui
 import win32ui
 import win32con
-import win32api
 import datetime
 import re
 from PIL import Image
@@ -64,31 +63,8 @@ class CaptureScreen(object):
         self.x_draw = x_poz - self.width_offset
         self.y_draw = y_poz - self.height_offset
 
-    # this function gets only visible monitors (not  virtual)
-    def get_visible_monitors(self, ):
-        i = 0
-        try:
-            i = win32api.GetSystemMetrics(win32con.SM_CMONITORS)
-        except Exception as ex:
-            self.logger.debug('eception: %s', ex.message)
-        return i
-
-    # this function gets displayDeviceName   
-    def enum_display_devices(self):
-        i = 0
-        while True:
-            try:
-                device = win32api.EnumDisplayDevices(None, i)
-                self.logger.debug('Count [%d] Device: %s DeviceName(%s) ', i, device.DeviceString, device.DeviceName)
-                i += 1
-            except Exception as ex:
-                self.logger.info('exception: %s', ex.message)
-                break
-            return i
-
     def grab_handle(self):
         self.h_desktop = win32gui.GetDesktopWindow()
-        return True
 
     def create_context(self):
         # A device context is a structure that defines a set of graphic objects and their associated attributes

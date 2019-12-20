@@ -66,7 +66,7 @@ class RS232Serial(object):
         except Exception as err:
             self.logger.debug(err)
 
-    def fill_buffer(self, hex_str_command):
+    def fill_rs232_buffer(self, hex_str_command):
         n = 4
         command = [int(hex_str_command[i:i + n], 16) for i in range(0, len(hex_str_command), n)]
         for x in command:
@@ -85,9 +85,9 @@ class RS232Serial(object):
                 command_string = self.config.get('key_released', key)
 
             self.logger.debug("Get command and fill buffer: " + str(command_string))
-            self.buffer = self.fill_buffer(command_string)
+            self.buffer = self.fill_rs232_buffer(command_string)
             self.logger.debug("Get command version and fill buffer: " + str(command_version))
-            self.version = self.fill_buffer(command_version)
+            self.version = self.fill_rs232_buffer(command_version)
             return True
 
         except Exception as err:

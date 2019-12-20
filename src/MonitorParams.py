@@ -1,5 +1,6 @@
 import win32api
 import win32gui
+import win32con
 import logging
 
 module_logger = logging.getLogger('application.MonitorParams')
@@ -34,3 +35,24 @@ class MonitorParams(object):
 
         params_list = [width, height, width_offset, height_offset]
         return params_list
+
+    def enum_display_devices(self):
+        i = 0
+        while True:
+            try:
+                device = win32api.EnumDisplayDevices(None, i)
+                self.logger.debug('Count [%d] Device: %s DeviceName(%s) ', i, device.DeviceString, device.DeviceName)
+                i += 1
+            except Exception as ex:
+                self.logger.info('exception: %s', ex.message)
+                break
+            return i
+
+    # this function gets only visible monitors (not  virtual)
+    def get_visible_monitors(self, ):
+        i = 0
+        try:
+            i = win32api.GetSystemMetrics(win32con.SM_CMONITORS)
+        except Exception as ex:
+            self.logger.debug('exception: %s', ex.message)
+        return i

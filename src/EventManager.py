@@ -32,7 +32,7 @@ class EventManager(object):
         self.xml = XmlCreator.XmlCreator()
         self.rsCommand = RS232Serial.RS232Serial()
 
-        self.event_list = []
+        self.playback_list = []
         self.start_time = time.time()
         self.monitor = MonitorParams.MonitorParams()
         self.is_play = False
@@ -43,7 +43,6 @@ class EventManager(object):
         self.send_tcp = False
         self.is_connected = False
         self.send_rs232 = False
-        self.send_rs = True
 
         self.tcp_queue = Queue.Queue()
         self.rs232_queue = Queue.Queue()
@@ -54,12 +53,12 @@ class EventManager(object):
         self.event_tcp_thread = threading.Event()
         self.event_rs232_thread = threading.Event()
 
-        tcp_thread = threading.Thread(name='blocking',
+        tcp_thread = threading.Thread(name='TCP send',
                                       target=self.send_tcp_command,
                                       args=(self.event_tcp_thread, time_out_event, self.tcp_queue, time_out_empty))
         tcp_thread.start()
 
-        rs232_thread = threading.Thread(name='blocking',
+        rs232_thread = threading.Thread(name='RS232 send',
                                         target=self.send_rs232_command,
                                         args=(
                                             self.event_rs232_thread, time_out_event, self.rs232_queue, time_out_empty))
@@ -79,6 +78,9 @@ class EventManager(object):
 
     def set_start_recording(self):
         self.is_recording = True
+        # set the timer value when recording has started
+        # elapsed time between previous (or starting recorting) and next command = current time - start_time
+        self.start_time = time.time()
 
     def get_recording_status(self):
         return self.is_recording
@@ -101,45 +103,61 @@ class EventManager(object):
     def get_send_rs232_status(self):
         return self.send_rs232
 
-    def fill_event_list(self, event_message_name, key1, key2):
+    def fill_tcp_queue(self, data):
+        self.tcp_queue.put(data)
+        self.event_tcp_thread.set()
+        self.logger.debug('Set event to send tcp: %s', self.event_tcp_thread.is_set())
 
+    def fill_rs232_queue(self, data):
+        # add KEY value to queue [key, status:press/released]
+        self.rs232_queue.put(data)
+        self.event_rs232_thread.set()
+        self.logger.debug('Set event to send rs232: %s', self.event_rs232_thread.is_set())
+
+    def fill_buffers(self, event_message_type, key1, key2):
         elapsed_time = time.time() - self.start_time
 
         self.start_time = time.time()
         # self.get_monitor_params()
 
         (x, y) = self.monitor.get_cursor_position()
-        self.logger.debug('Mouse event: %s position %s %s ', event_message_name, x, y)
+        self.logger.debug('Mouse event: %s position %s %s ', event_message_type, x, y)
 
-        arg_list = [x, y, event_message_name, key1, key2, elapsed_time]
-        self.event_list.append(arg_list)
+        arg_list = [x, y, event_message_type, key1, key2, elapsed_time]
 
-        self.logger.info('Event %s %s %s ', event_message_name, hex(key1), hex(key2))
+        if self.get_recording_status():
+            self.playback_list.append(arg_list)
+
+        if self.get_send_tcp_status():
+            self.fill_tcp_queue(arg_list)
+
+        if self.get_send_rs232_status():
+            self.fill_rs232_queue((hex(key2), event_message_type))
+
+        self.logger.info('Event %s %s %s ', event_message_type, hex(key1), hex(key2))
 
         return True
 
-    def clear_event_list(self):
-        del self.event_list[:]
+    def clear_playback_list(self):
+        del self.playback_list[:]
 
-    def play_event_list(self):
+    def play_playback_list(self):
         executor = EventExecutor.EventExecutor()
 
         while self.is_play:
-            for value in self.event_list:
+            for value in self.playback_list:
                 # self.logger.info('Play event delay : %s ',value[4])
                 self.logger.debug('Wait delay time to execute next command: %s', value[5])
                 time.sleep(value[5])  # first wait elapsed time then press
 
-                if self.is_connected:
-                    self.tcp_queue.put(value)
-                    self.event_tcp_thread.set()
-                    self.logger.debug('Set event to send tcp: %s', self.event_tcp_thread.is_set())
+                # while playback, fill tcp queue then thread will send it
+                if self.is_connected and self.send_tcp:
+                    self.fill_tcp_queue(value)
 
-                if self.send_rs:
+                # while playback, fill rs232 queue then thread will send it
+                if self.send_rs232:
                     # add KEY value to queue [key, status]
-                    self.rs232_queue.put((hex(value[4]), value[2]))
-                    self.event_rs232_thread.set()
-                    self.logger.debug('Set event to send rs232: %s', self.event_rs232_thread.is_set())
+                    self.fill_rs232_queue((hex(value[4]), value[2]))
 
                 if value[2] == Event_type['mouse move']:
                     # Pass the coordinates (x,y) as a tuple:
@@ -178,9 +196,9 @@ class EventManager(object):
             self.logger.info('Playback : STOPPED - Event list is finished ')
             self.is_play = False
 
-    def save_event_list(self):
+    def save_playback_list(self):
         self.xml.create_root("root")
-        for value in self.event_list:
+        for value in self.playback_list:
             self.xml.create_child("command")
             self.xml.create_element("param", "posX", str(value[0]))
             self.xml.create_element("param", "posY", str(value[1]))
@@ -191,9 +209,9 @@ class EventManager(object):
         self.xml.compose_tree()
         self.xml.save_xml()
 
-    def load_xml_files(self):
+    def load_xml_to_playback_list(self):
         path = str(os.getcwd())
-        self.event_list = XmlCreator.merge_files(path, "command", "param")
+        self.playback_list = XmlCreator.merge_files(path, "command", "param")
 
     def send_tcp_command(self, event_thread, time_out_event, queue, time_out_empty):
 
@@ -216,10 +234,11 @@ class EventManager(object):
                         queue.task_done()
                         break
                     else:
+                        # if queue is not empty
                         if self.is_connected:
                             data = pickle.dumps(value)
                             self.logger.debug('send_data TCP')
-                            self.is_connected = self.server.send_data(data)
+                            self.server.send_data(data)
                             self.logger.debug('Value: %s', value)
 
                             ack_format = format(value[5], '.5f')
@@ -251,7 +270,7 @@ class EventManager(object):
                         queue.task_done()
                         break
                     else:
-                        if self.send_rs:
+                        if self.send_rs232:
                             if value[1] == 2:
                                 self.rsCommand.set_command(value[0], True)
                                 self.rsCommand.send_command()

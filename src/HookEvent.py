@@ -2,9 +2,7 @@ import logging
 import pythoncom
 import pyHook
 from pyHook import GetKeyState, HookConstants
-import CaptureScreen
 import threading
-import time
 import string
 import MonitorParams
 import EventManager
@@ -47,23 +45,20 @@ class HookEvent(object):
         self.logger.debug('creating an instance of HookEvent')
         self.hm = pyHook.HookManager()
         self.event_manager = EventManager.EventManager()
-        self.start_time = time.time()
-        self.enum = CaptureScreen.CaptureScreen()
-        self.logger.debug('Number of display devices: %s ', str(self.enum.enum_display_devices()))
-        self.logger.debug('Number of physical monitors: %s ', str(self.enum.get_visible_monitors()))
-
         self.monitor = MonitorParams.MonitorParams()
+        self.logger.debug('Number of display devices: %s ', str(self.monitor.enum_display_devices()))
+        self.logger.debug('Number of physical monitors: %s ', str(self.monitor.get_visible_monitors()))
 
     def move(self, event):
         self.logger.debug('Mouse event : %s ', event.MessageName)
-        if self.event_manager.get_recording_status():
-            self.event_manager.fill_event_list(Event_type[event.MessageName], 0, 0)
+        if self.event_manager.get_recording_status() or self.event_manager.get_send_tcp_status():
+            self.event_manager.fill_buffers(Event_type[event.MessageName], 0, 0)
         return True
 
     def left_down(self, event):
         self.logger.debug('Mouse event : %s ', event.MessageName)
-        if self.event_manager.get_recording_status():
-            self.event_manager.fill_event_list(Event_type[event.MessageName], 0, 1)
+        if self.event_manager.get_recording_status() or self.event_manager.get_send_tcp_status():
+            self.event_manager.fill_buffers(Event_type[event.MessageName], 0, 1)
             t = threading.Thread(target=self.event_manager.do_capture_screen)
             t.start()
 
@@ -71,8 +66,8 @@ class HookEvent(object):
 
     def right_down(self, event):
         self.logger.debug('Mouse event : %s ', event.MessageName)
-        if self.event_manager.get_recording_status():
-            self.event_manager.fill_event_list(Event_type[event.MessageName], 0, 2)
+        if self.event_manager.get_recording_status() or self.event_manager.get_send_tcp_status():
+            self.event_manager.fill_buffers(Event_type[event.MessageName], 0, 2)
             t = threading.Thread(target=self.event_manager.do_capture_screen)
             t.start()
 
@@ -80,8 +75,8 @@ class HookEvent(object):
 
     def middle_down(self, event):
         self.logger.debug('Mouse event : %s ', event.MessageName)
-        if self.event_manager.get_recording_status():
-            self.event_manager.fill_event_list(Event_type[event.MessageName], 0, 4)
+        if self.event_manager.get_recording_status() or self.event_manager.get_send_tcp_status():
+            self.event_manager.fill_buffers(Event_type[event.MessageName], 0, 4)
             t = threading.Thread(target=self.event_manager.do_capture_screen)
             t.start()
 
@@ -89,8 +84,8 @@ class HookEvent(object):
 
     def wheel(self, event):
         self.logger.debug('Mouse event : %s ', event.MessageName)
-        if self.event_manager.get_recording_status():
-            self.event_manager.fill_event_list(Event_type[event.MessageName], 0, event.Wheel)
+        if self.event_manager.get_recording_status() or self.event_manager.get_send_tcp_status():
+            self.event_manager.fill_buffers(Event_type[event.MessageName], 0, event.Wheel)
 
         return True
 
@@ -101,7 +96,7 @@ class HookEvent(object):
                 if event.MessageName == 'key sys down':
                     # key sys down when ALT+V pressed. Key down if single key
                     # add the last up ALT , before stop recording
-                    self.event_manager.fill_event_list(Event_type["key sys up"], 0, 164)
+                    self.event_manager.fill_buffers(Event_type["key sys up"], 0, 164)
                     self.event_manager.set_stop_recording()
                     self.logger.info('Capture : STOP Recording ')
             else:
@@ -110,9 +105,31 @@ class HookEvent(object):
                         # key sys down when ALT+V pressed. Key down if single key
                         self.event_manager.set_start_recording()
                         self.logger.info('Capture : START Recording ')
-                        self.start_time = time.time()
                 else:
-                    self.logger.info('If you want record event, please first stop playback ')
+                    if event.MessageName == 'key sys down':
+                        self.logger.info('If you want record event, please first stop playback ')
+
+        # "ALT+T send value by TCP "
+        if GetKeyState(HookConstants.VKeyToID('VK_MENU')) and event.KeyID == int("0x54", 16):
+            if self.event_manager.get_send_tcp_status():
+                if event.MessageName == 'key sys down':
+                    self.event_manager.set_stop_send_tcp()
+                    self.logger.info('Capture : STOP SEND TCP ')
+            else:
+                if event.MessageName == 'key sys down':
+                    self.event_manager.set_start_send_tcp()
+                    self.logger.info('Capture : START SEND TCP ')
+
+        # "ALT+R send value by RS232 "
+        if GetKeyState(HookConstants.VKeyToID('VK_MENU')) and event.KeyID == int("0x52", 16):
+            if self.event_manager.get_send_rs232_status():
+                if event.MessageName == 'key sys down':
+                    self.event_manager.set_stop_send_rs232()
+                    self.logger.info('Capture : STOP SEND RS232 ')
+            else:
+                if event.MessageName == 'key sys down':
+                    self.event_manager.set_start_send_rs232()
+                    self.logger.info('Capture : START SEND RS232 ')
 
         # "ALT+B play list"
         elif GetKeyState(HookConstants.VKeyToID('VK_MENU')) and event.KeyID == int("0x42", 16):
@@ -127,7 +144,7 @@ class HookEvent(object):
                         # key sys down when ALT+V pressed. Key down if single key
                         self.event_manager.set_start_playback()
                         self.logger.info('Playback : PLAY playback ')
-                        t = threading.Thread(target=self.event_manager.play_event_list())
+                        t = threading.Thread(name='Play list', target=self.event_manager.play_playback_list())
                         t.start()
                 else:
                     self.logger.info('If you want play event, please first stop recording ')
@@ -135,7 +152,7 @@ class HookEvent(object):
         elif GetKeyState(HookConstants.VKeyToID('VK_MENU')) and event.KeyID == int("0x53", 16):
             if not self.event_manager.get_recording_status() and not self.event_manager.get_playback_status():
                 if event.MessageName == 'key sys down':
-                    self.event_manager.save_event_list()
+                    self.event_manager.save_playback_list()
                     self.logger.info('Saving List')
             else:
                 self.logger.info('If you want save list, please first stop playback and capture ')
@@ -143,7 +160,7 @@ class HookEvent(object):
         elif GetKeyState(HookConstants.VKeyToID('VK_MENU')) and event.KeyID == int("0x4C", 16):
             if not self.event_manager.get_recording_status() and not self.event_manager.get_playback_status():
                 if event.MessageName == 'key sys down':
-                    self.event_manager.load_xml_files()
+                    self.event_manager.load_xml_to_playback_list()
                     self.logger.info('Merge xml files into the command list')
                     # for element in self.event_list:
                     #     print element
@@ -151,7 +168,7 @@ class HookEvent(object):
         elif GetKeyState(HookConstants.VKeyToID('VK_MENU')) and event.KeyID == int("0x4e", 16):
             if not self.event_manager.get_recording_status() and not self.event_manager.get_playback_status():
                 if event.MessageName == 'key sys down':
-                    self.event_manager.clear_event_list()
+                    self.event_manager.clear_playback_list()
                     self.logger.info('Event List : clear ')
             else:
                 self.logger.info('If you want clear list, please first stop playback and capture ')
@@ -161,7 +178,7 @@ class HookEvent(object):
             self.logger.info('KeyboardEvent : Shift+Print screen ')
             if self.event_manager.get_recording_status():
                 print event.MessageName
-                self.event_manager.fill_event_list(Event_type[event.MessageName], 160, event.KeyID)
+                self.event_manager.fill_buffers(Event_type[event.MessageName], 160, event.KeyID)
 
         # "CTRL+key"
         elif GetKeyState(HookConstants.VKeyToID('VK_CONTROL')):
@@ -170,23 +187,26 @@ class HookEvent(object):
             if self.event_manager.get_recording_status():
                 if event.Key in string.ascii_uppercase:
                     # if ctrl pressed and The uppercase letters 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-                    self.event_manager.fill_event_list(Event_type[event.MessageName], 162, event.KeyID)
-                    t = threading.Thread(target=self.event_manager.do_capture_screen)
+                    self.event_manager.fill_buffers(Event_type[event.MessageName], 162, event.KeyID)
+                    t = threading.Thread(target=self.event_manager.do_capture_screen())
                     t.start()
                 else:
-                    self.event_manager.fill_event_list(Event_type[event.MessageName], 0, event.KeyID)
+                    self.event_manager.fill_buffers(Event_type[event.MessageName], 0, event.KeyID)
                     t = threading.Thread(target=self.event_manager.do_capture_screen)
                     t.start()
         # Keys
         else:
             # self.logger.info('KeyboardEvent : %s %s ',event.MessageName, hex(event.KeyID))
             if self.event_manager.get_recording_status():
+                self.event_manager.fill_buffers(Event_type[event.MessageName], 0, event.KeyID)
                 if event.MessageName == 'key down':
-                    self.event_manager.fill_event_list(Event_type[event.MessageName], 0, event.KeyID)
                     t = threading.Thread(target=self.event_manager.do_capture_screen)
                     t.start()
-                else:
-                    self.event_manager.fill_event_list(Event_type[event.MessageName], 0, event.KeyID)
+            if self.event_manager.get_playback_status():
+                if event.MessageName == 'key down':
+                    t = threading.Thread(target=self.event_manager.do_capture_screen)
+                    t.start()
+
         return True
 
     def hook_mouse_and_key(self):
