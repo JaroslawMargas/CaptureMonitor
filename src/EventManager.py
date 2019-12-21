@@ -140,6 +140,18 @@ class EventManager(object):
 
     def clear_playback_list(self):
         del self.playback_list[:]
+        
+        self.tcp_queue.mutex.acquire()
+        self.tcp_queue.queue.clear()
+        self.tcp_queue.all_tasks_done.notify_all()
+        self.tcp_queue.unfinished_tasks = 0
+        self.tcp_queue.mutex.release()
+
+        self.rs232_queue.mutex.acquire()
+        self.rs232_queue.queue.clear()
+        self.rs232_queue.all_tasks_done.notify_all()
+        self.rs232_queue.unfinished_tasks = 0
+        self.rs232_queue.mutex.release()
 
     def play_playback_list(self):
         executor = EventExecutor.EventExecutor()
