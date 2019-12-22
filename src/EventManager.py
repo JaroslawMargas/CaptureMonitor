@@ -44,6 +44,8 @@ class EventManager(object):
         self.is_connected = False
         self.send_rs232 = False
 
+        self.do_capture = False
+
         self.tcp_queue = Queue.Queue()
         self.rs232_queue = Queue.Queue()
 
@@ -102,6 +104,15 @@ class EventManager(object):
 
     def get_send_rs232_status(self):
         return self.send_rs232
+
+    def set_stop_capture(self):
+        self.do_capture = False
+
+    def set_start_capture(self):
+        self.do_capture = True
+
+    def get_capture_status(self):
+        return self.do_capture
 
     def fill_tcp_queue(self, data):
         self.tcp_queue.put(data)
