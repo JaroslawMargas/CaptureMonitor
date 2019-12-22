@@ -148,6 +148,7 @@ class HookEvent(object):
                         t.start()
                 else:
                     self.logger.info('If you want play event, please first stop recording ')
+
         # ALT+S Save current list.
         elif GetKeyState(HookConstants.VKeyToID('VK_MENU')) and event.KeyID == int("0x53", 16):
             if not self.event_manager.get_recording_status() and not self.event_manager.get_playback_status():
@@ -156,19 +157,21 @@ class HookEvent(object):
                     self.logger.info('Saving List')
             else:
                 self.logger.info('If you want save list, please first stop playback and capture ')
+
         # ALT+L Load merged xml files
         elif GetKeyState(HookConstants.VKeyToID('VK_MENU')) and event.KeyID == int("0x4C", 16):
             if not self.event_manager.get_recording_status() and not self.event_manager.get_playback_status():
                 if event.MessageName == 'key sys down':
                     self.event_manager.load_xml_to_playback_list()
                     self.logger.info('Merge xml files into the command list')
-                    # for element in self.event_list:
-                    #     print element
+
         # "ALT+N clear recording list"
         elif GetKeyState(HookConstants.VKeyToID('VK_MENU')) and event.KeyID == int("0x4e", 16):
             if not self.event_manager.get_recording_status() and not self.event_manager.get_playback_status():
                 if event.MessageName == 'key sys down':
                     self.event_manager.clear_playback_list()
+                    self.event_manager.clear_tcp_queue()
+                    self.event_manager.clear_rs232_queue()
                     self.logger.info('Event List : clear ')
             else:
                 self.logger.info('If you want clear list, please first stop playback and capture ')
@@ -177,7 +180,6 @@ class HookEvent(object):
             # print "Shift+Print screen"
             self.logger.info('KeyboardEvent : Shift+Print screen ')
             if self.event_manager.get_recording_status():
-                print event.MessageName
                 self.event_manager.fill_buffers(Event_type[event.MessageName], 160, event.KeyID)
 
         # "CTRL+key"
@@ -196,8 +198,8 @@ class HookEvent(object):
                     t.start()
         # Keys
         else:
-            # self.logger.info('KeyboardEvent : %s %s ',event.MessageName, hex(event.KeyID))
-            if self.event_manager.get_recording_status():
+            if self.event_manager.get_recording_status() or self.event_manager.get_send_tcp_status() or\
+                    self.event_manager.get_send_rs232_status():
                 self.event_manager.fill_buffers(Event_type[event.MessageName], 0, event.KeyID)
                 if event.MessageName == 'key down':
                     t = threading.Thread(target=self.event_manager.do_capture_screen)

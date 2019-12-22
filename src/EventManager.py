@@ -128,7 +128,7 @@ class EventManager(object):
         if self.get_recording_status():
             self.playback_list.append(arg_list)
 
-        if self.get_send_tcp_status():
+        if self.get_send_tcp_status() and self.is_connected:
             self.fill_tcp_queue(arg_list)
 
         if self.get_send_rs232_status():
@@ -140,13 +140,15 @@ class EventManager(object):
 
     def clear_playback_list(self):
         del self.playback_list[:]
-        
+
+    def clear_tcp_queue(self):
         self.tcp_queue.mutex.acquire()
         self.tcp_queue.queue.clear()
         self.tcp_queue.all_tasks_done.notify_all()
         self.tcp_queue.unfinished_tasks = 0
         self.tcp_queue.mutex.release()
 
+    def clear_rs232_queue(self):
         self.rs232_queue.mutex.acquire()
         self.rs232_queue.queue.clear()
         self.rs232_queue.all_tasks_done.notify_all()
@@ -161,15 +163,6 @@ class EventManager(object):
                 # self.logger.info('Play event delay : %s ',value[4])
                 self.logger.debug('Wait delay time to execute next command: %s', value[5])
                 time.sleep(value[5])  # first wait elapsed time then press
-
-                # while playback, fill tcp queue then thread will send it
-                if self.is_connected and self.send_tcp:
-                    self.fill_tcp_queue(value)
-
-                # while playback, fill rs232 queue then thread will send it
-                if self.send_rs232:
-                    # add KEY value to queue [key, status]
-                    self.fill_rs232_queue((hex(value[4]), value[2]))
 
                 if value[2] == Event_type['mouse move']:
                     # Pass the coordinates (x,y) as a tuple:
