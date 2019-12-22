@@ -59,9 +59,9 @@ class HookEvent(object):
         self.logger.debug('Mouse event : %s ', event.MessageName)
         if self.event_manager.get_recording_status() or self.event_manager.get_send_tcp_status():
             self.event_manager.fill_buffers(Event_type[event.MessageName], 0, 1)
-            if self.event_manager.get_capture_status():
-                t = threading.Thread(target=self.event_manager.do_capture_screen)
-                t.start()
+        if self.event_manager.get_capture_status() and event.MessageName == "mouse left down":
+            t = threading.Thread(target=self.event_manager.do_capture_screen)
+            t.start()
 
         return True
 
@@ -134,7 +134,7 @@ class HookEvent(object):
                     self.event_manager.set_start_send_rs232()
                     self.logger.info('START SEND RS232 ')
 
-        #ALT+P  make screenshoot with mouse or key down
+        # ALT+P  make screenshoot with mouse or key down
         if GetKeyState(HookConstants.VKeyToID('VK_MENU')) and event.KeyID == int("0x50", 16):
             if self.event_manager.get_capture_status():
                 if event.MessageName == 'key sys down':
@@ -214,7 +214,7 @@ class HookEvent(object):
                         t.start()
         # Keys
         else:
-            if self.event_manager.get_recording_status() or self.event_manager.get_send_tcp_status() or\
+            if self.event_manager.get_recording_status() or self.event_manager.get_send_tcp_status() or \
                     self.event_manager.get_send_rs232_status():
                 self.event_manager.fill_buffers(Event_type[event.MessageName], 0, event.KeyID)
                 if event.MessageName == 'key down' and self.event_manager.get_capture_status():
