@@ -69,9 +69,9 @@ class HookEvent(object):
         self.logger.debug('Mouse event : %s ', event.MessageName)
         if self.event_manager.get_recording_status() or self.event_manager.get_send_tcp_status():
             self.event_manager.fill_buffers(Event_type[event.MessageName], 0, 2)
-            if self.event_manager.get_capture_status():
-                t = threading.Thread(target=self.event_manager.do_capture_screen)
-                t.start()
+        if self.event_manager.get_capture_status():
+            t = threading.Thread(target=self.event_manager.do_capture_screen)
+            t.start()
 
         return True
 
@@ -79,9 +79,9 @@ class HookEvent(object):
         self.logger.debug('Mouse event : %s ', event.MessageName)
         if self.event_manager.get_recording_status() or self.event_manager.get_send_tcp_status():
             self.event_manager.fill_buffers(Event_type[event.MessageName], 0, 4)
-            if self.event_manager.get_capture_status():
-                t = threading.Thread(target=self.event_manager.do_capture_screen)
-                t.start()
+        if self.event_manager.get_capture_status():
+            t = threading.Thread(target=self.event_manager.do_capture_screen)
+            t.start()
 
         return True
 
@@ -204,26 +204,18 @@ class HookEvent(object):
                 if event.Key in string.ascii_uppercase:
                     # if ctrl pressed and The uppercase letters 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
                     self.event_manager.fill_buffers(Event_type[event.MessageName], 162, event.KeyID)
-                    if self.event_manager.get_capture_status():
-                        t = threading.Thread(target=self.event_manager.do_capture_screen())
-                        t.start()
-                else:
-                    if self.event_manager.get_capture_status():
-                        self.event_manager.fill_buffers(Event_type[event.MessageName], 0, event.KeyID)
-                        t = threading.Thread(target=self.event_manager.do_capture_screen)
-                        t.start()
+                if self.event_manager.get_capture_status():
+                    self.event_manager.fill_buffers(Event_type[event.MessageName], 0, event.KeyID)
+                    t = threading.Thread(target=self.event_manager.do_capture_screen)
+                    t.start()
         # Keys
         else:
             if self.event_manager.get_recording_status() or self.event_manager.get_send_tcp_status() or \
                     self.event_manager.get_send_rs232_status():
                 self.event_manager.fill_buffers(Event_type[event.MessageName], 0, event.KeyID)
-                if event.MessageName == 'key down' and self.event_manager.get_capture_status():
-                    t = threading.Thread(target=self.event_manager.do_capture_screen)
-                    t.start()
-            if self.event_manager.get_playback_status():
-                if event.MessageName == 'key down' and self.event_manager.get_capture_status():
-                    t = threading.Thread(target=self.event_manager.do_capture_screen)
-                    t.start()
+            if event.MessageName == 'key down' and self.event_manager.get_capture_status():
+                t = threading.Thread(target=self.event_manager.do_capture_screen)
+                t.start()
 
         return True
 
