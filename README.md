@@ -8,6 +8,7 @@ Instruction:
 - ALT + N - clear sequence
 - ALT + S - save sequence to xml file
 - ALT + L - load all xml files and merge to one sequence
+- ALT + P - make screen shoot with key or mouse down status
 
 config.ini
 TCP_IP = localhost for the server 
