@@ -1,0 +1,5 @@
+configparser==4.0.2
+Pillow==7.0.0
+pyHook==1.5.1
+pypiwin32==223
+pywin32==227
