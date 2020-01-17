@@ -1,6 +1,6 @@
 import logging
 import serial
-import ConfigParser
+import configparser
 import time
 
 module_logger = logging.getLogger('application.RS232Serial')
@@ -32,7 +32,7 @@ class RS232Serial(object):
 
     def __init__(self):
         self.logger = logging.getLogger('application.RS232Serial')
-        self.config = ConfigParser.RawConfigParser()
+        self.config = configparser.RawConfigParser()
         self.config.read("rscommand.ini")
         self.buffer = bytearray()
         self.version = bytearray()
@@ -91,7 +91,7 @@ class RS232Serial(object):
             return True
 
         except Exception as err:
-            self.logger.debug("No possible set command: " + str(err.message))
+            self.logger.debug("No possible set command: " + str(err))
 
     def send_command(self):
         self.logger.debug("Send command: ")
@@ -101,7 +101,7 @@ class RS232Serial(object):
             self.ser.write(self.buffer)
             return True
         except Exception as err:
-            self.logger.debug("No possible send command: " + str(err.message))
+            self.logger.debug("No possible send command: " + str(err))
         return True
 
     def read_command(self):
@@ -110,13 +110,13 @@ class RS232Serial(object):
             while True:
                 c = self.ser.read(1)
                 if c:
-                    received_string += str(hex(int(c.encode('hex'), 16)))
+                    received_string += str(c.decode("utf-8"))
                 else:
                     break
             # print(received_string)
             return received_string
         except Exception as err:
-            self.logger.debug("No possible read command: " + str(err.message))
+            self.logger.debug("No possible read command: " + str(err))
 
 
 if __name__ == "__main__":

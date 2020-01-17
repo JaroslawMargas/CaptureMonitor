@@ -24,15 +24,15 @@ Event_type = {
 
 
 def on_mouse_event(event):
-    print 'MessageName:', event.MessageName
-    print 'Message:', event.Message
-    print 'Time:', event.Time
-    print 'Window:', event.Window
-    print 'WindowName:', event.WindowName
-    print 'Position:', event.Position
-    print 'Wheel:', event.Wheel
-    print 'Injected:', event.Injected
-    print '---'
+    print('MessageName:', event.MessageName)
+    print('Message:', event.Message)
+    print('Time:', event.Time)
+    print('Window:', event.Window)
+    print('WindowName:', event.WindowName)
+    print('Position:', event.Position)
+    print('Wheel:', event.Wheel)
+    print('Injected:', event.Injected)
+    print('---')
     return True
 
     # hook mouse

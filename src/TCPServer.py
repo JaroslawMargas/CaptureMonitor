@@ -2,7 +2,7 @@ import logging
 import socket
 from _socket import SOL_SOCKET, SO_REUSEADDR
 import threading
-import ConfigParser
+import configparser
 
 module_logger = logging.getLogger('application.TCPServer')
 
@@ -14,7 +14,7 @@ class TCPServer(object):
         self.logger.debug('creating an instance of TCPServer')
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        config = ConfigParser.RawConfigParser()
+        config = configparser.RawConfigParser()
         config.read('config.ini')
         self.TCP_IP = config.get('server', 'TCP_IP')
         self.TCP_PORT = config.getint('server', 'TCP_PORT')
@@ -47,7 +47,6 @@ class TCPServer(object):
         except socket.error as err:
             if err.errno:
                 self.logger.error('Error send_data(): %s', err)
-
 
     def set_timeout(self, ):
         #         self.timeout_event = timeout_event

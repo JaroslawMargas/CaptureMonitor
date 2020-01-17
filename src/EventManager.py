@@ -8,7 +8,8 @@ import time
 import logging
 import os
 import threading
-import Queue
+import queue
+from queue import Empty
 import pickle
 
 Event_type = {
@@ -46,8 +47,8 @@ class EventManager(object):
 
         self.do_capture = False
 
-        self.tcp_queue = Queue.Queue()
-        self.rs232_queue = Queue.Queue()
+        self.tcp_queue = queue.Queue()
+        self.rs232_queue = queue.Queue()
 
         time_out_event = 2
         time_out_empty = 0.25
@@ -153,18 +154,26 @@ class EventManager(object):
         del self.playback_list[:]
 
     def clear_tcp_queue(self):
-        self.tcp_queue.mutex.acquire()
-        self.tcp_queue.queue.clear()
-        self.tcp_queue.all_tasks_done.notify_all()
-        self.tcp_queue.unfinished_tasks = 0
-        self.tcp_queue.mutex.release()
+        mutex = threading.Lock()
+        mutex.acquire()
+        try:
+            # self.tcp_queue.queue.clear()
+            self.tcp_queue = queue.Queue()
+            # self.tcp_queue.task_done()
+            # self.tcp_queue.unfinished_tasks = 0
+        finally:
+            mutex.release()
 
     def clear_rs232_queue(self):
-        self.rs232_queue.mutex.acquire()
-        self.rs232_queue.queue.clear()
-        self.rs232_queue.all_tasks_done.notify_all()
-        self.rs232_queue.unfinished_tasks = 0
-        self.rs232_queue.mutex.release()
+        mutex = threading.Lock()
+        mutex.acquire()
+        try:
+            # self.tcp_queue.queue.clear()
+            self.rs232_queue = queue.Queue()
+            # self.rs232_queue.task_done()
+            # self.rs232_queue.unfinished_tasks = 0
+        finally:
+            mutex.release()
 
     def play_playback_list(self):
         executor = EventExecutor.EventExecutor()
@@ -229,7 +238,7 @@ class EventManager(object):
         path = str(os.getcwd())
         self.playback_list = XmlCreator.merge_files(path, "command", "param")
 
-    def send_tcp_command(self, event_thread, time_out_event, queue, time_out_empty):
+    def send_tcp_command(self, event_thread, time_out_event, queue_buffer, time_out_empty):
 
         while True:
             if not self.is_connected:
@@ -242,12 +251,12 @@ class EventManager(object):
 
                 while True:
                     try:
-                        value = queue.get(timeout=time_out_empty)
+                        value = queue_buffer.get(timeout=time_out_empty)
                         # If timeout, it blocks at most timeout seconds and raises the Empty exception
                         # if no item was available within that time.
-                    except Queue.Empty:
+                    except Empty:
                         event_thread.clear()
-                        queue.task_done()
+                        queue_buffer.task_done()
                         break
                     else:
                         # if queue is not empty
@@ -268,7 +277,7 @@ class EventManager(object):
             else:
                 self.logger.debug('Waiting for event to send %s:', event_thread.is_set())
 
-    def send_rs232_command(self, event_thread, time_out_event, queue, time_out_empty):
+    def send_rs232_command(self, event_thread, time_out_event, queue_buffer, time_out_empty):
 
         while True:
             event_thread.wait(time_out_event)
@@ -277,13 +286,13 @@ class EventManager(object):
 
                 while True:
                     try:
-                        value = queue.get(timeout=time_out_empty)
+                        value = queue_buffer.get(timeout=time_out_empty)
                         # If timeout, it blocks at most timeout seconds and raises the Empty exception
                         # if no item was available within that time.
 
-                    except Queue.Empty:
+                    except Empty:
                         event_thread.clear()
-                        queue.task_done()
+                        queue_buffer.task_done()
                         break
                     else:
                         if self.send_rs232:

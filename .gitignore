@@ -12,3 +12,4 @@ src/.svn/entries
 *.spec
 *.iml
 *.xml
+/venv
