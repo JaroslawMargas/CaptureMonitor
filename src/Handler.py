@@ -52,7 +52,8 @@ class Handler(object):
             # self.logger.info(Virtual_Kode.VK_CODE[key_string])
             str_key = ""
             for x in Virtual_Kode.VK_CODE[key_string]:
-                str_key += hex(x) + " "
+                if x != 0:
+                    str_key += hex(x) + " "
             self.logger.info("Pressed:" + str_key)
             if any([key in COMBO for COMBO in COMBINATION]):
                 current.append(key)
@@ -60,7 +61,7 @@ class Handler(object):
                     str_key_combination = ''
                     for x in current:
                         for k in Virtual_Kode.VK_CODE[str(x).replace("'", "")]:
-                            if k !=0:
+                            if k != 0:
                                 str_key_combination += hex(k) + " "
                     self.logger.info("Pressed:" + str_key_combination)
         except KeyError:
@@ -73,7 +74,8 @@ class Handler(object):
             # self.logger.info(Virtual_Kode.VK_CODE[key_string])
             str_key = ""
             for x in Virtual_Kode.VK_CODE[key_string]:
-                str_key += hex(x) + " "
+                if x != 0:
+                    str_key += hex(x) + " "
             self.logger.info("Released:" + str_key)
             current.clear()
         except KeyError:
