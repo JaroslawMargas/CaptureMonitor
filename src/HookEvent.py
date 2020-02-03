@@ -1,7 +1,7 @@
 import logging
 import pythoncom
-# import pyHook
-# from pyHook import GetKeyState, HookConstants
+import pyHook
+from pyHook import GetKeyState, HookConstants
 import threading
 import string
 import MonitorParams

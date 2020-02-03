@@ -76,6 +76,7 @@ class EventManager(object):
     def get_playback_status(self):
         return self.is_play
 
+
     def set_stop_recording(self):
         self.is_recording = False
 
@@ -175,7 +176,9 @@ class EventManager(object):
         finally:
             mutex.release()
 
-    def play_playback_list(self):
+    def play_playback_list(self, stop_playback):
+
+        self.is_play = stop_playback
         executor = EventExecutor.EventExecutor()
 
         while self.is_play:

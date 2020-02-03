@@ -1,9 +1,10 @@
 import logging
-import HookEvent
-# import pyHook
-import datetime
-import re
-import Handler
+# import HookEvent
+# import Handler
+import sys
+from PySide2.QtWidgets import QApplication
+
+import GuiApp
 
 if __name__ == '__main__':
     # logging.basicConfig(level=logging.INFO)
@@ -35,6 +36,14 @@ if __name__ == '__main__':
 
     # hook = HookEvent.HookEvent()
     # hook.hook_mouse_and_key()
+    # #
+    # hook = Handler.Handler()
+    # hook.make_hand()
 
-    hook = Handler.Handler()
-    hook.make_hand()
+    app = QApplication(sys.argv)
+
+    widget = GuiApp.MyWidget()
+    widget.resize(300, 300)
+    widget.show()
+
+    sys.exit(app.exec_())
