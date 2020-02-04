@@ -47,7 +47,7 @@ class Handler(object):
         self.logger.debug('Number of display devices: %s ', str(self.monitor.enum_display_devices()))
         self.logger.debug('Number of physical monitors: %s ', str(self.monitor.get_visible_monitors()))
 
-        self.stop_play_threads = False
+        self.stop_play_thread = False
         self.t_play = None
 
     def record(self, button_pressed):
@@ -73,7 +73,7 @@ class Handler(object):
             if button_pressed:
                 # key sys down when ALT+V pressed. Key down if single key
                 self.event_manager.set_stop_playback()
-                self.stop_play_threads = False
+                self.stop_play_thread = False
                 self.logger.info('Playback : STOP playback ')
                 self.t_play.join()
         else:
@@ -81,10 +81,10 @@ class Handler(object):
                 if button_pressed:
                     # key sys down when ALT+V pressed. Key down if single key
                     self.event_manager.set_start_playback()
-                    self.stop_play_threads = True
+                    self.stop_play_thread = True
                     self.logger.info('Playback : PLAY playback ')
                     self.t_play = threading.Thread(name='Play list', target=self.event_manager.play_playback_list,
-                                                   args=(self.stop_play_threads,))
+                                                   args=(self.stop_play_thread,))
                     self.t_play.start()
             else:
                 self.logger.info('If you want play event, please first stop recording ')
@@ -97,15 +97,15 @@ class Handler(object):
         else:
             self.logger.info('If you want save list, please first stop playback and capture ')
 
-    def load(self, button_pressed):
+    def load(self, button_down):
         if not self.event_manager.get_recording_status() and not self.event_manager.get_playback_status():
-            if button_pressed:
+            if button_down:
                 self.event_manager.load_xml_to_playback_list()
                 self.logger.info('Merge xml files into the command list')
 
-    def clear(self, button_pressed):
+    def clear(self, button_down):
         if not self.event_manager.get_recording_status() and not self.event_manager.get_playback_status():
-            if button_pressed:
+            if button_down:
                 self.event_manager.clear_playback_list()
                 self.event_manager.clear_tcp_queue()
                 self.event_manager.clear_rs232_queue()
@@ -113,33 +113,33 @@ class Handler(object):
         else:
             self.logger.info('If you want clear list, please first stop playback and capture ')
 
-    def send_tcp(self, button_pressed):
+    def send_tcp(self, button_down):
         if self.event_manager.get_send_tcp_status():
-            if button_pressed:
+            if button_down:
                 self.event_manager.set_stop_send_tcp()
                 self.logger.info('STOP SEND TCP ')
         else:
-            if button_pressed:
+            if button_down:
                 self.event_manager.set_start_send_tcp()
                 self.logger.info('START SEND TCP ')
 
-    def send_rs232(self, button_pressed):
+    def send_rs232(self, button_down):
         if self.event_manager.get_send_rs232_status():
-            if button_pressed:
+            if button_down:
                 self.event_manager.set_stop_send_rs232()
                 self.logger.info('STOP SEND RS232 ')
         else:
-            if button_pressed:
+            if button_down:
                 self.event_manager.set_start_send_rs232()
                 self.logger.info('START SEND RS232 ')
 
-    def make_capture(self, button_pressed):
+    def make_capture(self, button_down):
         if self.event_manager.get_capture_status():
-            if button_pressed:
+            if button_down:
                 self.event_manager.set_stop_capture()
                 self.logger.info('STOP SCREEN SHOOT ')
         else:
-            if button_pressed:
+            if button_down:
                 self.event_manager.set_start_capture()
                 self.logger.info('START SCREEN SHOOT')
 
@@ -197,7 +197,7 @@ class Handler(object):
                 current.clear()
 
         except KeyError:
-            self.logger.info("Combination not allowed")
+            self.logger.info("Combination is not allowed")
 
     def key_release(self, key):
         try:
