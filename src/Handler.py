@@ -248,7 +248,7 @@ class Handler(object):
         if self.event_manager.get_recording_status() or self.event_manager.get_send_tcp_status():
             self.event_manager.fill_buffers(Event_type["mouse wheel"], 0, dy)
 
-    def make_hand(self):
+    def hook_mouse_and_key(self):
         with MouseListener(on_click=self.mouse_click, on_scroll=self.mouse_scroll,
                            on_move=self.mouse_move) as self.listener:
             with KeyboardListener(on_press=self.key_press, on_release=self.key_release) as self.listener:

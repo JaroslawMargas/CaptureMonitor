@@ -49,7 +49,7 @@ class MyWidget(QWidget):
         print("close pressed")
 
     def start_hook(self):
-        self.t_hook = threading.Thread(name='start hand', target=self.hook.make_hand)
+        self.t_hook = threading.Thread(name='start hand', target=self.hook.hook_mouse_and_key)
         self.t_hook.start()
         self.stop_handler.setEnabled(True)
         self.start_handler.setEnabled(False)

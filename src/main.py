@@ -38,7 +38,7 @@ if __name__ == '__main__':
     # hook.hook_mouse_and_key()
     # #
     # hook = Handler.Handler()
-    # hook.make_hand()
+    # hook.hook_mouse_and_key()
 
     app = QApplication(sys.argv)
 
