@@ -2,20 +2,27 @@ import sys
 import random
 from PySide2.QtWidgets import (QApplication, QLabel, QPushButton,
                                QVBoxLayout, QWidget, QDialogButtonBox)
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtCore import Slot, Qt, Signal, QObject
 import Handler
 import threading
+import time
+
 
 class MyWidget(QWidget):
     def __init__(self):
         QWidget.__init__(self)
 
         self.hook = Handler.Handler()
+        self.t_hook = None
+        self.t_start = None
 
         self.start_handler = QPushButton("Start Hook")
         self.stop_handler = QPushButton("Stop Hook")
 
         self.record = QPushButton("Start Recording")
+
+        # this button will have a one state but add Widget for monitoring of playback.
+
         self.play = QPushButton("Start/Stop Playback")
         self.text = QLabel("Hello World")
         self.text.setAlignment(Qt.AlignCenter)
@@ -38,10 +45,12 @@ class MyWidget(QWidget):
         self.record.clicked.connect(self.start_record)
         self.play.clicked.connect(self.start_play)
 
-    @Slot()
+    def closeEvent(self, event):
+        print("close pressed")
+
     def start_hook(self):
-        self.t = threading.Thread(name='start hand', target=self.hook.make_hand)
-        self.t.start()
+        self.t_hook = threading.Thread(name='start hand', target=self.hook.make_hand)
+        self.t_hook.start()
         self.stop_handler.setEnabled(True)
         self.start_handler.setEnabled(False)
         self.record.setEnabled(True)
@@ -49,7 +58,7 @@ class MyWidget(QWidget):
 
     def stop_hook(self):
         self.hook.stop_handling()
-        self.t.join()
+        self.t_hook.join()
         self.stop_handler.setEnabled(False)
         self.start_handler.setEnabled(True)
         self.record.setEnabled(False)
@@ -60,12 +69,27 @@ class MyWidget(QWidget):
         if is_record:
             self.record.setText("Stop Recording")
             self.play.setEnabled(False)
+            self.stop_handler.setEnabled(False)
         else:
             self.record.setText("Start Recording")
             self.play.setEnabled(True)
+            self.stop_handler.setEnabled(True)
 
     def start_play(self):
         self.hook.play(True)
+        self.play.setEnabled(False)
+        self.record.setEnabled(False)
+        self.t_start = threading.Thread(name='button stat', target=self.set_play_status)
+        self.t_start.start()
+
+    def set_play_status(self):
+        while True:
+            time.sleep(0.100)
+            if not self.hook.event_manager.get_playback_status():
+                self.play.setEnabled(True)
+                self.record.setEnabled(True)
+                break
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

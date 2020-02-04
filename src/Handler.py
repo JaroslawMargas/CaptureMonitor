@@ -7,6 +7,7 @@ import threading
 import MonitorParams
 import EventManager
 import Virtual_Kode
+import sys
 
 module_logger = logging.getLogger('application.Handler')
 
@@ -46,7 +47,7 @@ class Handler(object):
         self.logger.debug('Number of display devices: %s ', str(self.monitor.enum_display_devices()))
         self.logger.debug('Number of physical monitors: %s ', str(self.monitor.get_visible_monitors()))
 
-        self.stop_threads = False
+        self.stop_play_threads = False
         self.t_play = None
 
     def record(self, button_pressed):
@@ -72,7 +73,7 @@ class Handler(object):
             if button_pressed:
                 # key sys down when ALT+V pressed. Key down if single key
                 self.event_manager.set_stop_playback()
-                self.stop_threads = False
+                self.stop_play_threads = False
                 self.logger.info('Playback : STOP playback ')
                 self.t_play.join()
         else:
@@ -80,10 +81,10 @@ class Handler(object):
                 if button_pressed:
                     # key sys down when ALT+V pressed. Key down if single key
                     self.event_manager.set_start_playback()
-                    self.stop_threads = True
+                    self.stop_play_threads = True
                     self.logger.info('Playback : PLAY playback ')
                     self.t_play = threading.Thread(name='Play list', target=self.event_manager.play_playback_list,
-                                                   args=(self.stop_threads,))
+                                                   args=(self.stop_play_threads,))
                     self.t_play.start()
             else:
                 self.logger.info('If you want play event, please first stop recording ')
@@ -193,6 +194,8 @@ class Handler(object):
                                 self.save(True)
                             if str_key_combination == "0x5d0x4e":
                                 self.clear(True)
+                current.clear()
+
         except KeyError:
             self.logger.info("Combination not allowed")
 
@@ -211,7 +214,6 @@ class Handler(object):
             if self.event_manager.get_recording_status():
                 self.event_manager.fill_buffers(Event_type["key up"], key1, key2)
 
-            current.clear()
         except KeyError:
             self.logger.debug("Key not allowed")
 

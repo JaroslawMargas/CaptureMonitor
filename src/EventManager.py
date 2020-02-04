@@ -40,8 +40,9 @@ class EventManager(object):
         self.is_recording = False
 
         self.server = None
+        self.tcp_thread = None
+        self.send_tcp = None
 
-        self.send_tcp = False
         self.is_connected = False
         self.send_rs232 = False
 
@@ -55,11 +56,6 @@ class EventManager(object):
 
         self.event_tcp_thread = threading.Event()
         self.event_rs232_thread = threading.Event()
-
-        tcp_thread = threading.Thread(name='TCP send',
-                                      target=self.send_tcp_command,
-                                      args=(self.event_tcp_thread, time_out_event, self.tcp_queue, time_out_empty))
-        tcp_thread.start()
 
         rs232_thread = threading.Thread(name='RS232 send',
                                         target=self.send_rs232_command,
@@ -76,7 +72,6 @@ class EventManager(object):
     def get_playback_status(self):
         return self.is_play
 
-
     def set_stop_recording(self):
         self.is_recording = False
 
@@ -91,8 +86,16 @@ class EventManager(object):
 
     def set_stop_send_tcp(self):
         self.send_tcp = False
+        self.tcp_thread.join()
 
     def set_start_send_tcp(self):
+        time_out_event = 2
+        time_out_empty = 0.25
+        self.tcp_thread = threading.Thread(name='TCP send',
+                                           target=self.send_tcp_command,
+                                           args=(self.event_tcp_thread, time_out_event, self.tcp_queue,
+                                                 time_out_empty))
+        self.tcp_thread.start()
         self.send_tcp = True
 
     def get_send_tcp_status(self):
@@ -247,6 +250,8 @@ class EventManager(object):
             if not self.is_connected:
                 self.server = TCPServer.TCPServer()
                 self.is_connected = self.server.connect()
+                if not self.get_send_tcp_status():
+                    break
 
             event_thread.wait(time_out_event)
             if event_thread.is_set():
