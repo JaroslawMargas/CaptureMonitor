@@ -19,7 +19,7 @@ COMBINATION = [[keyboard.Key.alt_l, keyboard.KeyCode(char='v')],  # make record
                [keyboard.Key.alt_l, keyboard.KeyCode(char='r')],  # start/stop sending by rs232
                [keyboard.Key.alt_l, keyboard.KeyCode(char='p')],  # start/stop making capture from monitor
                [keyboard.Key.alt_l, keyboard.KeyCode(char='s')],  # save sequence to xml
-               [keyboard.Key.alt_l, keyboard.KeyCode(char='l')]]  # save sequence to xml
+               [keyboard.Key.alt_l, keyboard.KeyCode(char='l')]]  # load sequence to xml
 
 current = list()
 
