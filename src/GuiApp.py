@@ -1,8 +1,7 @@
 import sys
-import random
 from PySide2.QtWidgets import (QApplication, QLabel, QPushButton,
-                               QVBoxLayout, QWidget, QDialogButtonBox)
-from PySide2.QtCore import Slot, Qt, Signal, QObject
+                               QVBoxLayout, QHBoxLayout, QGroupBox, QWidget, QCheckBox)
+from PySide2.QtCore import Qt
 import Handler
 import threading
 import time
@@ -23,21 +22,47 @@ class MyWidget(QWidget):
 
         # this button will have a one state but add Widget for monitoring of playback.
 
+        # Widgets
         self.play = QPushButton("Start/Stop Playback")
         self.text = QLabel("Hello World")
         self.text.setAlignment(Qt.AlignCenter)
+        self.check_tcp = QCheckBox("TCP")
+        self.check_rs232 = QCheckBox("RS232")
 
+        # Widget contructor
         self.stop_handler.setEnabled(False)
         self.record.setEnabled(False)
         self.play.setEnabled(False)
+        self.check_tcp.setEnabled(True)
+        self.check_rs232.setEnabled(True)
 
-        self.layout = QVBoxLayout()
-        self.layout.addWidget(self.text)
-        self.layout.addWidget(self.start_handler)
-        self.layout.addWidget(self.stop_handler)
-        self.layout.addWidget(self.record)
-        self.layout.addWidget(self.play)
-        self.setLayout(self.layout)
+        # Layouts
+        self.main_layout = QHBoxLayout()
+
+        self.verticalGroupBox = QGroupBox()
+        self.verticalGroupBox2 = QGroupBox()
+
+        self.main_layout.addWidget(self.verticalGroupBox)
+        self.main_layout.addWidget(self.verticalGroupBox2)
+
+        # GroupBox 1
+        self.layout_v = QVBoxLayout()
+        self.layout_v.addWidget(self.text)
+        self.layout_v.addWidget(self.start_handler)
+        self.layout_v.addWidget(self.stop_handler)
+        self.layout_v.addWidget(self.record)
+        self.layout_v.addWidget(self.play)
+        self.verticalGroupBox.setLayout(self.layout_v)
+
+        # GroupBox 2
+        self.layout_v2 = QVBoxLayout()
+        self.layout_v2.setAlignment(Qt.AlignTop)
+        self.layout_v2.addWidget(self.check_tcp)
+        self.layout_v2.addWidget(self.check_rs232)
+        self.verticalGroupBox2.setLayout(self.layout_v2)
+
+        # set main layout
+        self.setLayout(self.main_layout)
 
         # Connecting the signal
         self.start_handler.clicked.connect(self.start_hook)
@@ -46,7 +71,7 @@ class MyWidget(QWidget):
         self.play.clicked.connect(self.start_play)
 
     def closeEvent(self, event):
-        print("close pressed")
+        print("application closed")
 
     def start_hook(self):
         self.t_hook = threading.Thread(name='start hand', target=self.hook.hook_mouse_and_key)
@@ -55,6 +80,8 @@ class MyWidget(QWidget):
         self.start_handler.setEnabled(False)
         self.record.setEnabled(True)
         self.play.setEnabled(True)
+        self.check_tcp.setEnabled(False)
+        self.check_rs232.setEnabled(False)
 
     def stop_hook(self):
         self.hook.stop_handling()
@@ -62,6 +89,8 @@ class MyWidget(QWidget):
         self.stop_handler.setEnabled(False)
         self.start_handler.setEnabled(True)
         self.record.setEnabled(False)
+        self.check_tcp.setEnabled(True)
+        self.check_rs232.setEnabled(True)
 
     def start_record(self):
         self.hook.record(True)
@@ -79,10 +108,10 @@ class MyWidget(QWidget):
         self.hook.play(True)
         self.play.setEnabled(False)
         self.record.setEnabled(False)
-        self.t_start = threading.Thread(name='button stat', target=self.set_play_status)
+        self.t_start = threading.Thread(name='button stat', target=self.check_play_status)
         self.t_start.start()
 
-    def set_play_status(self):
+    def check_play_status(self):
         while True:
             time.sleep(0.100)
             if not self.hook.event_manager.get_playback_status():
