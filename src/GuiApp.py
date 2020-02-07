@@ -28,6 +28,7 @@ class MyWidget(QWidget):
         self.text.setAlignment(Qt.AlignCenter)
         self.check_tcp = QCheckBox("TCP")
         self.check_rs232 = QCheckBox("RS232")
+        self.tcp_label = QLabel("TCP Status:")
 
         # Widget contructor
         self.stop_handler.setEnabled(False)
@@ -59,6 +60,7 @@ class MyWidget(QWidget):
         self.layout_v2.setAlignment(Qt.AlignTop)
         self.layout_v2.addWidget(self.check_tcp)
         self.layout_v2.addWidget(self.check_rs232)
+        self.layout_v2.addWidget(self.tcp_label)
         self.verticalGroupBox2.setLayout(self.layout_v2)
 
         # set main layout
@@ -69,6 +71,7 @@ class MyWidget(QWidget):
         self.stop_handler.clicked.connect(self.stop_hook)
         self.record.clicked.connect(self.start_record)
         self.play.clicked.connect(self.start_play)
+        self.check_tcp.clicked.connect(self.start_tcp)
 
     def closeEvent(self, event):
         print("application closed")
@@ -118,6 +121,15 @@ class MyWidget(QWidget):
                 self.play.setEnabled(True)
                 self.record.setEnabled(True)
                 break
+
+    def start_tcp(self):
+        self.hook.send_tcp(True)
+        if self.hook.event_manager.get_send_tcp_status():
+            self.tcp_label.setText("TCP Status: ON")
+            self.check_tcp.setChecked(True)
+        else:
+            self.tcp_label.setText("TCP Status: OFF")
+            self.check_tcp.setChecked(False)
 
 
 if __name__ == "__main__":
