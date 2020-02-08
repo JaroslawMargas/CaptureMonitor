@@ -7,7 +7,6 @@ import threading
 import MonitorParams
 import EventManager
 import Virtual_Kode
-import sys
 
 module_logger = logging.getLogger('application.Handler')
 
@@ -114,14 +113,11 @@ class Handler(object):
             self.logger.info('If you want clear list, please first stop playback and capture ')
 
     def send_tcp(self, button_down):
-        if self.event_manager.get_send_tcp_status():
-            if button_down:
-                self.event_manager.set_stop_send_tcp()
-                self.logger.info('STOP SEND TCP ')
-        else:
-            if button_down:
+        if button_down:
+            if not self.event_manager.get_send_tcp_status():
                 self.event_manager.set_start_send_tcp()
-                self.logger.info('START SEND TCP ')
+            else:
+                self.event_manager.set_stop_send_tcp()
 
     def send_rs232(self, button_down):
         if self.event_manager.get_send_rs232_status():
@@ -194,7 +190,6 @@ class Handler(object):
                                 self.save(True)
                             if str_key_combination == "0x5d0x4e":
                                 self.clear(True)
-                current.clear()
 
         except KeyError:
             self.logger.info("Combination is not allowed")
@@ -213,6 +208,7 @@ class Handler(object):
             key1, key2 = Virtual_Kode.VK_CODE[key_string]
             if self.event_manager.get_recording_status():
                 self.event_manager.fill_buffers(Event_type["key up"], key1, key2)
+            current.clear()
 
         except KeyError:
             self.logger.debug("Key not allowed")

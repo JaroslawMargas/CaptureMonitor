@@ -1,6 +1,6 @@
 import sys
 from PySide2.QtWidgets import (QApplication, QLabel, QPushButton,
-                               QVBoxLayout, QHBoxLayout, QGroupBox, QWidget, QCheckBox)
+                               QVBoxLayout, QHBoxLayout, QGroupBox, QWidget)
 from PySide2.QtCore import Qt
 import Handler
 import threading
@@ -14,6 +14,10 @@ class MyWidget(QWidget):
         self.hook = Handler.Handler()
         self.t_hook = None
         self.t_start = None
+        self.tcp_button_pressed = False
+
+        self.t_tcp = threading.Thread(name='button stat', target=self.tcp_label_status)
+        self.t_tcp.start()
 
         self.start_handler = QPushButton("Start Hook")
         self.stop_handler = QPushButton("Stop Hook")
@@ -26,9 +30,9 @@ class MyWidget(QWidget):
         self.play = QPushButton("Start/Stop Playback")
         self.text = QLabel("Hello World")
         self.text.setAlignment(Qt.AlignCenter)
-        self.check_tcp = QCheckBox("TCP")
-        self.check_rs232 = QCheckBox("RS232")
-        self.tcp_label = QLabel("TCP Status:")
+        self.check_tcp = QPushButton("TCP Start/Stop")
+        self.check_rs232 = QPushButton("RS232")
+        self.tcp_label = QLabel("TCP Status: OFF")
 
         # Widget contructor
         self.stop_handler.setEnabled(False)
@@ -83,7 +87,7 @@ class MyWidget(QWidget):
         self.start_handler.setEnabled(False)
         self.record.setEnabled(True)
         self.play.setEnabled(True)
-        self.check_tcp.setEnabled(False)
+        # self.check_tcp.setEnabled(False)
         self.check_rs232.setEnabled(False)
 
     def stop_hook(self):
@@ -92,7 +96,7 @@ class MyWidget(QWidget):
         self.stop_handler.setEnabled(False)
         self.start_handler.setEnabled(True)
         self.record.setEnabled(False)
-        self.check_tcp.setEnabled(True)
+        # self.check_tcp.setEnabled(True)
         self.check_rs232.setEnabled(True)
 
     def start_record(self):
@@ -123,13 +127,24 @@ class MyWidget(QWidget):
                 break
 
     def start_tcp(self):
-        self.hook.send_tcp(True)
-        if self.hook.event_manager.get_send_tcp_status():
-            self.tcp_label.setText("TCP Status: ON")
-            self.check_tcp.setChecked(True)
-        else:
-            self.tcp_label.setText("TCP Status: OFF")
-            self.check_tcp.setChecked(False)
+        self.tcp_button_pressed = True
+
+    def tcp_label_status(self):
+        while True:
+            time.sleep(0.100)
+            # if self.tcp_button_pressed:
+            if self.tcp_button_pressed:
+                if not self.hook.event_manager.get_send_tcp_status():
+                    self.hook.event_manager.set_start_send_tcp()
+                else:
+                    self.hook.event_manager.set_stop_send_tcp()
+
+            if not self.hook.event_manager.get_send_tcp_status():
+                self.tcp_label.setText("TCP Status: OFF")
+                self.tcp_button_pressed = False
+            else:
+                self.tcp_label.setText("TCP Status: ON")
+                self.tcp_button_pressed = False
 
 
 if __name__ == "__main__":

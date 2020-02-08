@@ -87,6 +87,7 @@ class EventManager(object):
     def set_stop_send_tcp(self):
         self.send_tcp = False
         self.tcp_thread.join()
+        self.logger.info('STOP SEND TCP ')
 
     def set_start_send_tcp(self):
         time_out_event = 2
@@ -245,7 +246,7 @@ class EventManager(object):
         self.playback_list = XmlCreator.merge_files(path, "command", "param")
 
     def send_tcp_command(self, event_thread, time_out_event, queue_buffer, time_out_empty):
-
+        self.logger.info('START SEND TCP ')
         while True:
             if not self.is_connected:
                 self.server = TCPServer.TCPServer()
