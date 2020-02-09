@@ -41,6 +41,7 @@ class EventManager(object):
 
         self.server = None
         self.tcp_thread = None
+        self.rs232_thread = None
         self.send_tcp = None
 
         self.is_connected = False
@@ -51,17 +52,8 @@ class EventManager(object):
         self.tcp_queue = queue.Queue()
         self.rs232_queue = queue.Queue()
 
-        time_out_event = 2
-        time_out_empty = 0.25
-
         self.event_tcp_thread = threading.Event()
         self.event_rs232_thread = threading.Event()
-
-        rs232_thread = threading.Thread(name='RS232 send',
-                                        target=self.send_rs232_command,
-                                        args=(
-                                            self.event_rs232_thread, time_out_event, self.rs232_queue, time_out_empty))
-        rs232_thread.start()
 
     def set_stop_playback(self):
         self.is_play = False
@@ -104,8 +96,18 @@ class EventManager(object):
 
     def set_stop_send_rs232(self):
         self.send_rs232 = False
+        self.rs232_thread.join()
+        self.logger.info('STOP SEND RS232 ')
 
     def set_start_send_rs232(self):
+        time_out_event = 2
+        time_out_empty = 0.25
+        self.rs232_thread = threading.Thread(name='RS232 send',
+                                             target=self.send_rs232_command,
+                                             args=(
+                                                 self.event_rs232_thread, time_out_event, self.rs232_queue,
+                                                 time_out_empty))
+        self.rs232_thread.start()
         self.send_rs232 = True
 
     def get_send_rs232_status(self):
@@ -287,13 +289,17 @@ class EventManager(object):
                 self.logger.debug('Waiting for event to send %s:', event_thread.is_set())
 
     def send_rs232_command(self, event_thread, time_out_event, queue_buffer, time_out_empty):
-
+        self.logger.info('START SEND RS232 ')
         while True:
+            if not self.get_send_rs232_status():
+                break
             event_thread.wait(time_out_event)
             if event_thread.is_set():
                 self.logger.debug('New data on the list - ready to be sent by rs232: %s', event_thread.is_set())
 
                 while True:
+                    if not self.get_send_rs232_status():
+                        break
                     try:
                         value = queue_buffer.get(timeout=time_out_empty)
                         # If timeout, it blocks at most timeout seconds and raises the Empty exception

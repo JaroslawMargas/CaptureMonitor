@@ -15,6 +15,7 @@ class MyWidget(QWidget):
         self.t_hook = None
         self.t_start = None
         self.tcp_button_pressed = False
+        self.rs232_button_pressed = False
 
         self.t_tcp = threading.Thread(name='button stat', target=self.tcp_label_status)
         self.t_tcp.start()
@@ -31,10 +32,11 @@ class MyWidget(QWidget):
         self.text = QLabel("Hello World")
         self.text.setAlignment(Qt.AlignCenter)
         self.check_tcp = QPushButton("TCP Start/Stop")
-        self.check_rs232 = QPushButton("RS232")
+        self.check_rs232 = QPushButton("RS232 Start/Stop")
         self.tcp_label = QLabel("TCP Status: OFF")
+        self.rs232_label = QLabel("RS232 Status: OFF")
 
-        # Widget contructor
+        # Widget constructor
         self.stop_handler.setEnabled(False)
         self.record.setEnabled(False)
         self.play.setEnabled(False)
@@ -65,6 +67,7 @@ class MyWidget(QWidget):
         self.layout_v2.addWidget(self.check_tcp)
         self.layout_v2.addWidget(self.check_rs232)
         self.layout_v2.addWidget(self.tcp_label)
+        self.layout_v2.addWidget(self.rs232_label)
         self.verticalGroupBox2.setLayout(self.layout_v2)
 
         # set main layout
@@ -76,6 +79,7 @@ class MyWidget(QWidget):
         self.record.clicked.connect(self.start_record)
         self.play.clicked.connect(self.start_play)
         self.check_tcp.clicked.connect(self.start_tcp)
+        self.check_rs232.clicked.connect(self.start_rs232)
 
     def closeEvent(self, event):
         print("application closed")
@@ -88,7 +92,7 @@ class MyWidget(QWidget):
         self.record.setEnabled(True)
         self.play.setEnabled(True)
         # self.check_tcp.setEnabled(False)
-        self.check_rs232.setEnabled(False)
+        # self.check_rs232.setEnabled(False)
 
     def stop_hook(self):
         self.hook.stop_handling()
@@ -129,6 +133,9 @@ class MyWidget(QWidget):
     def start_tcp(self):
         self.tcp_button_pressed = True
 
+    def start_rs232(self):
+        self.rs232_button_pressed = True
+
     def tcp_label_status(self):
         while True:
             time.sleep(0.100)
@@ -145,6 +152,20 @@ class MyWidget(QWidget):
             else:
                 self.tcp_label.setText("TCP Status: ON")
                 self.tcp_button_pressed = False
+
+
+            if self.rs232_button_pressed:
+                if not self.hook.event_manager.get_send_rs232_status():
+                    self.hook.event_manager.set_start_send_rs232()
+                else:
+                    self.hook.event_manager.set_stop_send_rs232()
+
+            if not self.hook.event_manager.get_send_rs232_status():
+                self.rs232_label.setText("RS232 Status: OFF")
+                self.rs232_button_pressed = False
+            else:
+                self.rs232_label.setText("RS232 Status: ON")
+                self.rs232_button_pressed = False
 
 
 if __name__ == "__main__":
