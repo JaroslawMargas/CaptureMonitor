@@ -25,7 +25,7 @@ class MyWidget(QWidget):
         self.stop_handler = QPushButton("Stop Hook")
 
         self.start_stop_record = QPushButton("Start/Stop Recording")
-        self.play_sequence = QPushButton("Start/Stop Playback")
+        self.start_stop_play = QPushButton("Start/Stop Playback")
         self.text = QLabel("Hello World")
         self.text.setAlignment(Qt.AlignCenter)
         self.start_stop_tcp = QPushButton("TCP Start/Stop")
@@ -37,7 +37,7 @@ class MyWidget(QWidget):
         # Widget constructor
         self.stop_handler.setEnabled(False)
         self.start_stop_record.setEnabled(False)
-        self.play_sequence.setEnabled(True)
+        self.start_stop_play.setEnabled(False)
         self.start_stop_tcp.setEnabled(True)
         self.start_stop_rs232.setEnabled(True)
         self.clear_sequence.setEnabled(True)
@@ -57,7 +57,7 @@ class MyWidget(QWidget):
         self.layout_v.addWidget(self.start_handler)
         self.layout_v.addWidget(self.stop_handler)
         self.layout_v.addWidget(self.start_stop_record)
-        self.layout_v.addWidget(self.play_sequence)
+        self.layout_v.addWidget(self.start_stop_play)
         self.layout_v.addWidget(self.clear_sequence)
         self.verticalGroupBox.setLayout(self.layout_v)
 
@@ -77,7 +77,7 @@ class MyWidget(QWidget):
         self.start_handler.clicked.connect(self.start_hook)
         self.stop_handler.clicked.connect(self.stop_hook)
         self.start_stop_record.clicked.connect(self.start_record)
-        self.play_sequence.clicked.connect(self.start_play)
+        self.start_stop_play.clicked.connect(self.start_play)
         self.start_stop_tcp.clicked.connect(self.start_tcp)
         self.start_stop_rs232.clicked.connect(self.start_rs232)
         self.clear_sequence.clicked.connect(self.clear)
@@ -91,7 +91,7 @@ class MyWidget(QWidget):
         self.stop_handler.setEnabled(True)
         self.start_handler.setEnabled(False)
         self.start_stop_record.setEnabled(True)
-        self.play_sequence.setEnabled(True)
+        self.start_stop_play.setEnabled(True)
         # self.check_tcp.setEnabled(False)
         # self.check_rs232.setEnabled(False)
 
@@ -101,6 +101,7 @@ class MyWidget(QWidget):
         self.stop_handler.setEnabled(False)
         self.start_handler.setEnabled(True)
         self.start_stop_record.setEnabled(False)
+        self.start_stop_play.setEnabled(False)
         # self.check_tcp.setEnabled(True)
         self.start_stop_rs232.setEnabled(True)
 
@@ -109,19 +110,28 @@ class MyWidget(QWidget):
         is_record = self.hook.event_manager.get_recording_status()
         if is_record:
             self.start_stop_record.setText("Stop Recording")
-            self.play_sequence.setEnabled(False)
+            self.start_stop_play.setEnabled(False)
             self.stop_handler.setEnabled(False)
             self.clear_sequence.setEnabled(False)
         else:
             self.start_stop_record.setText("Start Recording")
-            self.play_sequence.setEnabled(True)
+            self.start_stop_play.setEnabled(True)
             self.stop_handler.setEnabled(True)
             self.clear_sequence.setEnabled(True)
 
     def start_play(self):
         self.hook.play(True)
-        self.play_sequence.setEnabled(False)
-        self.start_stop_record.setEnabled(False)
+        # self.play_sequence.setEnabled(False)
+        is_play = self.hook.event_manager.get_playback_status()
+        if is_play:
+            self.start_stop_play.setText("Stop Playback")
+            self.start_stop_record.setEnabled(False)
+            self.stop_handler.setEnabled(False)
+        else:
+            self.start_stop_play.setText("Start Playback")
+            self.start_stop_record.setEnabled(True)
+            self.stop_handler.setEnabled(True)
+
         self.t_start = threading.Thread(name='button stat', target=self.check_play_status)
         self.t_start.start()
 
@@ -129,7 +139,8 @@ class MyWidget(QWidget):
         while True:
             time.sleep(0.100)
             if not self.hook.event_manager.get_playback_status():
-                self.play_sequence.setEnabled(True)
+                self.stop_handler.setEnabled(True)
+                self.start_stop_play.setEnabled(True)
                 self.start_stop_record.setEnabled(True)
                 break
 
