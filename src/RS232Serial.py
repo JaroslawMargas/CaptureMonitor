@@ -18,14 +18,16 @@ def scan_ports():
     return available
 
 
-def get_check_sum(data):
-    i_check = 0x00
-    for i in range(data[1] - 1):
-        i_check += (data[2 + i])
-    check_sum = hex(i_check & 0xFF)
-    # remove 0x from hex
-    # check_sum = str('%x' % tmp)
-    return check_sum
+def hexString_to_byteArray(hex_str_command):
+    # n = 4
+    # command = [int(hex_str_command[i:i + n], 16) for i in range(0, len(hex_str_command), n)]
+    # for x in command:
+    #     self.hex_buffer.append(x)
+    # check_sum = get_check_sum(command)
+    # self.hex_buffer.append(int(check_sum, 16))
+    # return self.hex_buffer
+    hex_buffer = bytearray.fromhex(hex_str_command)
+    return hex_buffer
 
 
 class RS232Serial(object):
@@ -40,8 +42,9 @@ class RS232Serial(object):
 
         self.ser = serial.Serial()
         self.ser.port = self.config.get('settings', "port")
-        self.ser.baudrate = self.config.get('settings', "baudrate")
-        # self.ser.port = "COM1"
+        # print(self.ser.port)
+        # self.ser.baudrate = self.config.get('settings', "baudrate")
+        # self.ser.port = "COM4"
         # self.ser.baudrate = 9600
         self.ser.bytesize = serial.EIGHTBITS  # number of bits per bytes
         self.ser.parity = serial.PARITY_ODD  # set parity check: no parity
@@ -66,15 +69,6 @@ class RS232Serial(object):
         except Exception as err:
             self.logger.debug(err)
 
-    def fill_rs232_buffer(self, hex_str_command):
-        n = 4
-        command = [int(hex_str_command[i:i + n], 16) for i in range(0, len(hex_str_command), n)]
-        for x in command:
-            self.hex_buffer.append(x)
-        check_sum = get_check_sum(command)
-        self.hex_buffer.append(int(check_sum, 16))
-        return self.hex_buffer
-
     def set_command(self, key, key_pressed):
         try:
             command_version = self.config.get('version', 'key_version')
@@ -84,21 +78,25 @@ class RS232Serial(object):
             else:
                 command_string = self.config.get('key_released', key)
 
-            self.logger.debug("Get command and fill buffer: " + str(command_string))
-            self.buffer = self.fill_rs232_buffer(command_string)
-            self.logger.debug("Get command version and fill buffer: " + str(command_version))
-            self.version = self.fill_rs232_buffer(command_version)
+            self.logger.info("Get command and fill buffer: " + str(command_string))
+            self.buffer = hexString_to_byteArray(command_string)
+            self.logger.info("Buffer to send: " + str(self.buffer))
+            self.logger.info("Get command version and fill buffer: " + str(command_version))
+            self.version = hexString_to_byteArray(command_version)
+            self.logger.info("Buffer to send: " + str(self.version))
             return True
 
         except Exception as err:
-            self.logger.debug("No possible set command: " + str(err))
+            self.logger.info("No possible set command: " + str(err))
 
     def send_command(self):
-        self.logger.debug("Send command: ")
+
         try:
             self.ser.write(self.version)
+            self.logger.info("Send command: " + str(self.version))
             time.sleep(0.001)
             self.ser.write(self.buffer)
+            self.logger.info("Send command: " + str(self.buffer))
             return True
         except Exception as err:
             self.logger.debug("No possible send command: " + str(err))
@@ -106,22 +104,19 @@ class RS232Serial(object):
 
     def read_command(self):
         try:
-            received_string = ''
             while True:
-                c = self.ser.read(1)
+                c = self.ser.read(14)
                 if c:
-                    received_string += str(c.decode("utf-8"))
+                    return c
                 else:
                     break
-            # print(received_string)
-            return received_string
         except Exception as err:
             self.logger.debug("No possible read command: " + str(err))
 
 
 if __name__ == "__main__":
     rs = RS232Serial()
-    rs.set_command("0x31", True)
+    rs.set_command("0x35", True)
+    rs.set_command("0x34", False)
     rs.send_command()
-    time.sleep(0.001)
     rs.read_command()

@@ -123,11 +123,9 @@ class Handler(object):
         if self.event_manager.get_send_rs232_status():
             if button_down:
                 self.event_manager.set_stop_send_rs232()
-                self.logger.info('STOP SEND RS232 ')
         else:
             if button_down:
                 self.event_manager.set_start_send_rs232()
-                self.logger.info('START SEND RS232 ')
 
     def make_capture(self, button_down):
         if self.event_manager.get_capture_status():
@@ -157,7 +155,8 @@ class Handler(object):
             self.logger.info("Pressed:" + str_key)
             key1, key2 = Virtual_Kode.VK_CODE[key_string]
 
-            if self.event_manager.get_recording_status():
+            if self.event_manager.get_recording_status() or self.event_manager.get_send_rs232_status():
+                self.logger.info("Fill buffer while recording:" + str(key))
                 self.event_manager.fill_buffers(Event_type["key down"], key1, key2)
 
             # make Capture from each key pressed
@@ -207,6 +206,7 @@ class Handler(object):
 
             key1, key2 = Virtual_Kode.VK_CODE[key_string]
             if self.event_manager.get_recording_status():
+                self.logger.info("Fill buffer while recording:" + str(key))
                 self.event_manager.fill_buffers(Event_type["key up"], key1, key2)
             current.clear()
 
@@ -245,8 +245,10 @@ class Handler(object):
             self.event_manager.fill_buffers(Event_type["mouse wheel"], 0, dy)
 
     def hook_mouse_and_key(self):
-        with MouseListener(on_click=self.mouse_click, on_scroll=self.mouse_scroll,
-                           on_move=self.mouse_move) as self.listener:
+        with MouseListener(on_click=self.mouse_click,
+                           # on_scroll=self.mouse_scroll,
+                           # on_move=self.mouse_move
+        ) as self.listener:
             with KeyboardListener(on_press=self.key_press, on_release=self.key_release) as self.listener:
                 self.listener.join()
 

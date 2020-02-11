@@ -84,12 +84,12 @@ class EventManager(object):
     def set_start_send_tcp(self):
         time_out_event = 2
         time_out_empty = 0.25
+        self.send_tcp = True
         self.tcp_thread = threading.Thread(name='TCP send',
                                            target=self.send_tcp_command,
                                            args=(self.event_tcp_thread, time_out_event, self.tcp_queue,
                                                  time_out_empty))
         self.tcp_thread.start()
-        self.send_tcp = True
 
     def get_send_tcp_status(self):
         return self.send_tcp
@@ -102,13 +102,13 @@ class EventManager(object):
     def set_start_send_rs232(self):
         time_out_event = 2
         time_out_empty = 0.25
+        self.send_rs232 = True
         self.rs232_thread = threading.Thread(name='RS232 send',
                                              target=self.send_rs232_command,
                                              args=(
                                                  self.event_rs232_thread, time_out_event, self.rs232_queue,
                                                  time_out_empty))
         self.rs232_thread.start()
-        self.send_rs232 = True
 
     def get_send_rs232_status(self):
         return self.send_rs232
@@ -131,7 +131,7 @@ class EventManager(object):
         # add KEY value to queue [key, status:press/released]
         self.rs232_queue.put(data)
         self.event_rs232_thread.set()
-        self.logger.debug('Set event to send rs232: %s', self.event_rs232_thread.is_set())
+        self.logger.info('Set event to send rs232: %s', self.event_rs232_thread.is_set())
 
     def fill_buffers(self, event_message_type, key1, key2):
         elapsed_time = time.time() - self.start_time
@@ -151,6 +151,7 @@ class EventManager(object):
             self.fill_tcp_queue(arg_list)
 
         if self.get_send_rs232_status():
+            self.logger.info("fill_rs232_queue:" + str(key1)+str(str(key2)))
             self.fill_rs232_queue((hex(key2), event_message_type))
 
         self.logger.info('Event %s %s %s ', event_message_type, hex(key1), hex(key2))
@@ -295,7 +296,7 @@ class EventManager(object):
                 break
             event_thread.wait(time_out_event)
             if event_thread.is_set():
-                self.logger.debug('New data on the list - ready to be sent by rs232: %s', event_thread.is_set())
+                self.logger.info('New data on the list - ready to be sent by rs232: %s', event_thread.is_set())
 
                 while True:
                     if not self.get_send_rs232_status():
@@ -319,7 +320,14 @@ class EventManager(object):
                                 self.rsCommand.set_command(value[0], False)
                                 self.rsCommand.send_command()
                             received = self.rsCommand.read_command()
-                            self.logger.debug('Received command %s:', received)
+                            try:
+                                str_rec = ''
+                                for itm in received:
+                                    str_rec += hex(itm)
+                                self.logger.info('Received command: %s', str_rec)
+                            except Exception as err:
+                                self.logger.info('No data receive: '+str(err))
+
                         else:
                             break
             else:
