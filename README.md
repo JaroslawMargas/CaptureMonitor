@@ -1,7 +1,8 @@
 # CaptureMonitor
 CaptureMonitor is a project in Python language base in the greater part on win32api and pyHook module
 
-https://user-images.githubusercontent.com/42811636/74271332-014da200-4d0d-11ea-9bec-b3860664d4de.jpg
+
+![App screen](/doc/app.jpg)
 
 Instruction:
 - run main.py
