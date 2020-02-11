@@ -62,3 +62,16 @@ Update 12.12.2019
 - rs232 command config
 - record keyboard key sequence, map key to hex command and send via rs232
 
+Updatae 11.02.2020
+- Update project from python 2.7 to 3.7 
+- QT Gui application with
+* start stop hook
+* start stop playback
+* start stop recording
+* send command by tcp status
+* send command by rs232 status
+* screenshoot from monitor status
+* list Widget
+
+additional description: ready for test and new function.
+
