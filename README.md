@@ -1,5 +1,5 @@
 # CaptureMonitor
-CaptureMonitor is a project in Python language base in the greater part on win32api and pyHook module
+CaptureMonitor is a project in Python language base in the greater part on win32api, QT and (pyHook module 2.7) or pynput(3.7).
 
 
 ![App screen](/doc/app.jpg)
