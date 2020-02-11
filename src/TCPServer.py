@@ -13,6 +13,7 @@ class TCPServer(object):
         self.logger = logging.getLogger('application.TCPServer')
         self.logger.debug('creating an instance of TCPServer')
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.settimeout(5)
 
         config = configparser.RawConfigParser()
         config.read('config.ini')
@@ -34,12 +35,13 @@ class TCPServer(object):
 
     def connect(self):
         self.logger.info('Waiting for a connection')
-        self.connection, client_address = self.sock.accept()
-
-        self.connection.settimeout(3)
-
-        self.logger.info('Connection address: %s', client_address)
-        return True
+        try:
+            self.connection, client_address = self.sock.accept()
+            self.connection.settimeout(10)
+            self.logger.info('Connection address: %s', client_address)
+            return True
+        except socket.timeout:
+            self.logger.info('Timeout for TCP connection')
 
     def send_data(self, data):
         try:

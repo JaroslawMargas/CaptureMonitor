@@ -40,8 +40,10 @@ class EventManager(object):
         self.is_recording = False
 
         self.server = None
+        self.tcp_thread = None
+        self.rs232_thread = None
+        self.send_tcp = None
 
-        self.send_tcp = False
         self.is_connected = False
         self.send_rs232 = False
 
@@ -49,23 +51,11 @@ class EventManager(object):
 
         self.tcp_queue = queue.Queue()
         self.rs232_queue = queue.Queue()
-
-        time_out_event = 2
-        time_out_empty = 0.25
+        self.widget_queue = queue.Queue()
+        self.new_widget = False
 
         self.event_tcp_thread = threading.Event()
         self.event_rs232_thread = threading.Event()
-
-        tcp_thread = threading.Thread(name='TCP send',
-                                      target=self.send_tcp_command,
-                                      args=(self.event_tcp_thread, time_out_event, self.tcp_queue, time_out_empty))
-        tcp_thread.start()
-
-        rs232_thread = threading.Thread(name='RS232 send',
-                                        target=self.send_rs232_command,
-                                        args=(
-                                            self.event_rs232_thread, time_out_event, self.rs232_queue, time_out_empty))
-        rs232_thread.start()
 
     def set_stop_playback(self):
         self.is_play = False
@@ -90,18 +80,37 @@ class EventManager(object):
 
     def set_stop_send_tcp(self):
         self.send_tcp = False
+        self.tcp_thread.join()
+        self.logger.info('STOP SEND TCP ')
 
     def set_start_send_tcp(self):
+        time_out_event = 2
+        time_out_empty = 0.25
         self.send_tcp = True
+        self.tcp_thread = threading.Thread(name='TCP send',
+                                           target=self.send_tcp_command,
+                                           args=(self.event_tcp_thread, time_out_event, self.tcp_queue,
+                                                 time_out_empty))
+        self.tcp_thread.start()
 
     def get_send_tcp_status(self):
         return self.send_tcp
 
     def set_stop_send_rs232(self):
         self.send_rs232 = False
+        self.rs232_thread.join()
+        self.logger.info('STOP SEND RS232 ')
 
     def set_start_send_rs232(self):
+        time_out_event = 2
+        time_out_empty = 0.25
         self.send_rs232 = True
+        self.rs232_thread = threading.Thread(name='RS232 send',
+                                             target=self.send_rs232_command,
+                                             args=(
+                                                 self.event_rs232_thread, time_out_event, self.rs232_queue,
+                                                 time_out_empty))
+        self.rs232_thread.start()
 
     def get_send_rs232_status(self):
         return self.send_rs232
@@ -124,7 +133,7 @@ class EventManager(object):
         # add KEY value to queue [key, status:press/released]
         self.rs232_queue.put(data)
         self.event_rs232_thread.set()
-        self.logger.debug('Set event to send rs232: %s', self.event_rs232_thread.is_set())
+        self.logger.info('Set event to send rs232: %s', self.event_rs232_thread.is_set())
 
     def fill_buffers(self, event_message_type, key1, key2):
         elapsed_time = time.time() - self.start_time
@@ -139,11 +148,15 @@ class EventManager(object):
 
         if self.get_recording_status():
             self.playback_list.append(arg_list)
+            if event_message_type in (2, 6):
+                self.widget_queue.put(arg_list)
+                self.new_widget = True
 
         if self.get_send_tcp_status() and self.is_connected:
             self.fill_tcp_queue(arg_list)
 
         if self.get_send_rs232_status():
+            self.logger.info("fill_rs232_queue:" + str(key1) + str(str(key2)))
             self.fill_rs232_queue((hex(key2), event_message_type))
 
         self.logger.info('Event %s %s %s ', event_message_type, hex(key1), hex(key2))
@@ -175,7 +188,9 @@ class EventManager(object):
         finally:
             mutex.release()
 
-    def play_playback_list(self):
+    def play_playback_list(self, stop_playback):
+
+        self.is_play = stop_playback
         executor = EventExecutor.EventExecutor()
 
         while self.is_play:
@@ -239,11 +254,13 @@ class EventManager(object):
         self.playback_list = XmlCreator.merge_files(path, "command", "param")
 
     def send_tcp_command(self, event_thread, time_out_event, queue_buffer, time_out_empty):
-
+        self.logger.info('START SEND TCP ')
         while True:
             if not self.is_connected:
                 self.server = TCPServer.TCPServer()
                 self.is_connected = self.server.connect()
+                if not self.get_send_tcp_status():
+                    break
 
             event_thread.wait(time_out_event)
             if event_thread.is_set():
@@ -278,13 +295,17 @@ class EventManager(object):
                 self.logger.debug('Waiting for event to send %s:', event_thread.is_set())
 
     def send_rs232_command(self, event_thread, time_out_event, queue_buffer, time_out_empty):
-
+        self.logger.info('START SEND RS232 ')
         while True:
+            if not self.get_send_rs232_status():
+                break
             event_thread.wait(time_out_event)
             if event_thread.is_set():
-                self.logger.debug('New data on the list - ready to be sent by rs232: %s', event_thread.is_set())
+                self.logger.info('New data on the list - ready to be sent by rs232: %s', event_thread.is_set())
 
                 while True:
+                    if not self.get_send_rs232_status():
+                        break
                     try:
                         value = queue_buffer.get(timeout=time_out_empty)
                         # If timeout, it blocks at most timeout seconds and raises the Empty exception
@@ -304,11 +325,30 @@ class EventManager(object):
                                 self.rsCommand.set_command(value[0], False)
                                 self.rsCommand.send_command()
                             received = self.rsCommand.read_command()
-                            self.logger.debug('Received command %s:', received)
+                            try:
+                                str_rec = ''
+                                for itm in received:
+                                    str_rec += hex(itm)
+                                self.logger.info('Received command: %s', str_rec)
+                            except Exception as err:
+                                self.logger.info('No data receive: ' + str(err))
+
                         else:
                             break
             else:
                 self.logger.debug('Waiting for event to send %s:', event_thread.is_set())
+
+    def fill_widget(self):
+        if self.new_widget:
+            while True:
+                try:
+                    time_out_empty = 2
+                    value = self.widget_queue.get(timeout=time_out_empty)
+                    return value
+                except Empty:
+                    self.widget_queue.task_done()
+                    self.new_widget = False
+                    break
 
     def do_capture_screen(self):
         capture_screen = CaptureScreen.CaptureScreen()
