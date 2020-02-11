@@ -246,8 +246,8 @@ class Handler(object):
 
     def hook_mouse_and_key(self):
         with MouseListener(on_click=self.mouse_click,
-                           # on_scroll=self.mouse_scroll,
-                           # on_move=self.mouse_move
+                           on_scroll=self.mouse_scroll,
+                           on_move=self.mouse_move
         ) as self.listener:
             with KeyboardListener(on_press=self.key_press, on_release=self.key_release) as self.listener:
                 self.listener.join()
