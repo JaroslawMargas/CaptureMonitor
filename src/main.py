@@ -43,7 +43,7 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
 
     widget = GuiApp.MyWidget()
-    widget.resize(300, 300)
+    widget.resize(600, 600)
     widget.show()
 
     sys.exit(app.exec_())

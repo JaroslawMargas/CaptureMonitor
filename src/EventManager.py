@@ -51,6 +51,8 @@ class EventManager(object):
 
         self.tcp_queue = queue.Queue()
         self.rs232_queue = queue.Queue()
+        self.widget_queue = queue.Queue()
+        self.new_widget = False
 
         self.event_tcp_thread = threading.Event()
         self.event_rs232_thread = threading.Event()
@@ -146,12 +148,15 @@ class EventManager(object):
 
         if self.get_recording_status():
             self.playback_list.append(arg_list)
+            if event_message_type in (2, 6):
+                self.widget_queue.put(arg_list)
+                self.new_widget = True
 
         if self.get_send_tcp_status() and self.is_connected:
             self.fill_tcp_queue(arg_list)
 
         if self.get_send_rs232_status():
-            self.logger.info("fill_rs232_queue:" + str(key1)+str(str(key2)))
+            self.logger.info("fill_rs232_queue:" + str(key1) + str(str(key2)))
             self.fill_rs232_queue((hex(key2), event_message_type))
 
         self.logger.info('Event %s %s %s ', event_message_type, hex(key1), hex(key2))
@@ -326,12 +331,24 @@ class EventManager(object):
                                     str_rec += hex(itm)
                                 self.logger.info('Received command: %s', str_rec)
                             except Exception as err:
-                                self.logger.info('No data receive: '+str(err))
+                                self.logger.info('No data receive: ' + str(err))
 
                         else:
                             break
             else:
                 self.logger.debug('Waiting for event to send %s:', event_thread.is_set())
+
+    def fill_widget(self):
+        if self.new_widget:
+            while True:
+                try:
+                    time_out_empty = 2
+                    value = self.widget_queue.get(timeout=time_out_empty)
+                    return value
+                except Empty:
+                    self.widget_queue.task_done()
+                    self.new_widget = False
+                    break
 
     def do_capture_screen(self):
         capture_screen = CaptureScreen.CaptureScreen()
