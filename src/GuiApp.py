@@ -5,6 +5,7 @@ from PySide2.QtCore import Qt
 import Handler
 import threading
 import time
+from queue import Empty
 
 
 class MyWidget(QWidget):
@@ -104,9 +105,6 @@ class MyWidget(QWidget):
         self.t_tcp = threading.Thread(name='button stat', target=self.tcp_label_status)
         self.t_tcp.start()
 
-        self.t_event_list = threading.Thread(name='button stat', target=self.event_list_status)
-        self.t_event_list.start()
-
     def closeEvent(self, event):
         print("application closed")
 
@@ -178,8 +176,8 @@ class MyWidget(QWidget):
         self.capture_button_pressed = True
 
     def tcp_label_status(self):
+        time_out_empty = 2
         while True:
-            time.sleep(0.100)
             # if self.tcp_button_pressed:
             if self.tcp_button_pressed:
                 if not self.hook.event_manager.get_send_tcp_status():
@@ -219,23 +217,21 @@ class MyWidget(QWidget):
             else:
                 self.capture_label.setText("Capture after click: ON")
                 self.capture_button_pressed = False
+            if not self.hook.event_manager.get_recording_status():
+                try:
+                    value = self.hook.event_manager.widget_queue.get(timeout=time_out_empty)
+                    str_val = "pos X: " + str(value[0]) + " pos Y: " + str(value[1]) + " Event type: " + str(
+                        value[2]) + " key1: " + str(value[3]) + " key2: " + str(value[4])
+                    self.event_list.addItem(str_val)
+                    self.event_list.setEnabled(False)
+                except Empty:
+                    self.event_list.scrollToBottom()
+                    self.event_list.setEnabled(True)
+                    # self.widget_queue.task_done()
 
     def clear(self):
         self.hook.clear(True)
-
-    def event_list_status(self):
-        while True:
-            time.sleep(0.100)
-            try:
-                if self.hook.event_manager.new_widget:
-                    value = self.hook.event_manager.fill_widget()
-                    str_val = "pos X:" + str(value[0]) + "pos Y:" + str(value[1]) + "Event type:" + str(
-                        value[2]) + "key1:" + str(value[3]) + "key2:" + str(value[4])
-                    self.event_list.addItem(str_val)
-                    self.event_list.scrollToBottom()
-            except TypeError:
-                pass
-
+        self.event_list.clear()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
